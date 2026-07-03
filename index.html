@@ -54,6 +54,7 @@
     line-height: 1.4;
   }
   .case-item:hover { background: #f2f6ff; }
+  .case-item.active { background: #dbe8ff; font-weight: 600; }
   .case-item .overdue-tag { color: #d9534f; font-size: 11px; margin-left: 4px; }
 
   /* ---------- 地圖 ---------- */
@@ -169,7 +170,7 @@ function popupHtml(item) {
     const pid = 'ph_' + item.id;
     photoHtml = `
       <div class="card-photo-wrap" id="${pid}">
-        <img src="${item.photos[0]}" data-idx="0" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-photo-empty\\'>圖片載入失敗</div>')">
+        <img src="${item.photos[0]}" data-idx="0" referrerpolicy="no-referrer" crossorigin="anonymous" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-photo-empty\\'>圖片暫時無法顯示</div>')">
         ${item.photos.length > 1 ? `
           <button class="photo-nav prev" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, -1)">‹</button>
           <button class="photo-nav next" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, 1)">›</button>
@@ -254,6 +255,8 @@ function renderMap(CASES) {
       el.className = 'case-item';
       el.innerHTML = `${item.title}${overdueDays > 0 ? `<span class="overdue-tag">逾期${Math.round(overdueDays)}天</span>` : ''}`;
       el.addEventListener('click', () => {
+        document.querySelectorAll('.case-item.active').forEach(n => n.classList.remove('active'));
+        el.classList.add('active');
         map.setView([item.lat, item.lng], 17, { animate: true });
         markerById[item.id].openPopup();
         if (window.innerWidth <= 720) document.getElementById('sidebar').classList.remove('open');

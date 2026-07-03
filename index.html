@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>路面案件管理地圖</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif; }
+
+  #app { display: flex; height: 100vh; }
+
+  /* ---------- 左側圖層清單 ---------- */
+  #sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    background: #fff;
+    border-right: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #sidebar-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #eee;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  #sidebar-header .count { font-size: 12px; color: #888; font-weight: 400; margin-top: 2px; }
+  #sidebar-header .updated { font-size: 11px; color: #aaa; font-weight: 400; margin-top: 2px; }
+
+  #layer-list { overflow-y: auto; flex: 1; }
+  #loading-msg, #error-msg { padding: 16px; font-size: 13px; color: #888; }
+  #error-msg { color: #d9534f; display: none; }
+
+  .layer-group { border-bottom: 1px solid #f0f0f0; }
+  .layer-group-title {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px; cursor: pointer; font-size: 14px; font-weight: 600;
+    color: #333; background: #fafafa;
+  }
+  .layer-group-title:hover { background: #f0f0f0; }
+  .layer-group-title .swatch { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .layer-group-title .cnt { margin-left: auto; color: #999; font-weight: 400; font-size: 12px; }
+
+  .case-item {
+    padding: 8px 16px 8px 34px;
+    font-size: 13px;
+    color: #444;
+    cursor: pointer;
+    border-bottom: 1px solid #f7f7f7;
+    line-height: 1.4;
+  }
+  .case-item:hover { background: #f2f6ff; }
+  .case-item .overdue-tag { color: #d9534f; font-size: 11px; margin-left: 4px; }
+
+  /* ---------- 地圖 ---------- */
+  #map { flex: 1; }
+
+  /* ---------- 自訂彈出小卡片 ---------- */
+  .leaflet-popup-content-wrapper {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.28);
+    padding: 0;
+  }
+  .leaflet-popup-content { margin: 0; width: 290px !important; }
+  .leaflet-popup-tip { background: #ffffff; }
+
+  .card-header {
+    padding: 10px 34px 8px 12px;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #202020;
+  }
+
+  .card-photo-wrap { position: relative; width: 100%; height: 150px; background: #111; overflow: hidden; }
+  .card-photo-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card-photo-empty { width: 100%; height: 150px; background: #eee; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 12px; }
+  .photo-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: rgba(0,0,0,0.4); color: #fff; border: none;
+    width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 14px;
+  }
+  .photo-nav.prev { left: 6px; } .photo-nav.next { right: 6px; }
+  .photo-count { position: absolute; bottom: 6px; right: 8px; background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; padding: 2px 7px; border-radius: 10px; }
+
+  .card-info { padding: 10px 12px; font-size: 12.5px; color: #333; }
+  .card-info .row { display: flex; margin-bottom: 5px; }
+  .card-info .label { width: 62px; flex-shrink: 0; color: #888; }
+  .card-info .value { flex: 1; word-break: break-all; }
+  .card-info .value.overdue { color: #d9534f; font-weight: 700; }
+  .card-info .value.empty { color: #bbb; }
+
+  .card-coords { font-size: 10.5px; color: #aaa; padding: 0 12px 10px 12px; }
+
+  /* ---------- 手機版：sidebar 收合 ---------- */
+  #sidebar-toggle {
+    display: none;
+    position: absolute; top: 10px; left: 10px; z-index: 1000;
+    background: #fff; border: 1px solid #ccc; border-radius: 6px;
+    width: 38px; height: 38px; font-size: 18px; cursor: pointer;
+  }
+  @media (max-width: 720px) {
+    #sidebar { position: absolute; z-index: 999; height: 100%; transform: translateX(-100%); transition: transform .2s; box-shadow: 4px 0 12px rgba(0,0,0,0.2); }
+    #sidebar.open { transform: translateX(0); }
+    #sidebar-toggle { display: block; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      路面案件管理地圖
+      <div class="count" id="total-count"></div>
+      <div class="updated" id="updated-time"></div>
+    </div>
+    <div id="loading-msg">資料載入中…</div>
+    <div id="error-msg">資料載入失敗，請稍後重新整理頁面。</div>
+    <div id="layer-list"></div>
+  </div>
+  <div style="position:relative; flex:1;">
+    <button id="sidebar-toggle">☰</button>
+    <div id="map"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+const LAYER_COLORS = {
+  "催辦案件": "#4285F4",
+  "危險案件": "#DB4436",
+  "近期狂催且有危險案件": "#9C27B0",
+  "逾期案件": "#F09300"
+};
+
+const map = L.map('map', { zoomControl: false }).setView([24.1435, 120.6480], 13);
+L.control.zoom({ position: 'topright' }).addTo(map);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors',
+  maxZoom: 19
+}).addTo(map);
+
+function makeIcon(color) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 22],
+    popupAnchor: [0, -22]
+  });
+}
+
+function fieldRow(label, value, isOverdue) {
+  const cls = isOverdue ? 'overdue' : (value ? '' : 'empty');
+  return `<div class="row"><div class="label">${label}</div><div class="value ${cls}">${value || '沒有值'}</div></div>`;
+}
+
+function popupHtml(item) {
+  const overdueDays = parseFloat(item['逾期天數']) || 0;
+  let photoHtml;
+  if (item.photos && item.photos.length > 0) {
+    const pid = 'ph_' + item.id;
+    photoHtml = `
+      <div class="card-photo-wrap" id="${pid}">
+        <img src="${item.photos[0]}" data-idx="0" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-photo-empty\\'>圖片載入失敗</div>')">
+        ${item.photos.length > 1 ? `
+          <button class="photo-nav prev" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, -1)">‹</button>
+          <button class="photo-nav next" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, 1)">›</button>
+          <div class="photo-count">1 / ${item.photos.length}</div>
+        ` : ''}
+      </div>`;
+  } else {
+    photoHtml = `<div class="card-photo-empty">無照片</div>`;
+  }
+
+  return `
+    <div class="card-header">${item.title}</div>
+    ${photoHtml}
+    <div class="card-info">
+      ${fieldRow('位置', item['位置'])}
+      ${fieldRow('建議人', item['建議人'])}
+      ${fieldRow('完成日期', item['完成日期'])}
+      ${fieldRow('逾期天數', item['逾期天數'] ? Math.round(overdueDays) : '', overdueDays > 0)}
+      ${fieldRow('狀態', item['狀態'])}
+    </div>
+    <div class="card-coords">📍 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
+  `;
+}
+
+window.changePhoto = function(wrapId, photos, dir) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  const img = wrap.querySelector('img');
+  let idx = parseInt(img.getAttribute('data-idx')) || 0;
+  idx = (idx + dir + photos.length) % photos.length;
+  img.setAttribute('data-idx', idx);
+  img.src = photos[idx];
+  const countEl = wrap.querySelector('.photo-count');
+  if (countEl) countEl.textContent = `${idx + 1} / ${photos.length}`;
+};
+
+function renderMap(CASES) {
+  const markersByLayer = {};
+  const markerById = {};
+
+  CASES.forEach(item => {
+    if (item.lat == null || item.lng == null) return;
+    const color = LAYER_COLORS[item.layer] || '#666';
+    const marker = L.marker([item.lat, item.lng], { icon: makeIcon(color) });
+    marker.bindPopup(popupHtml(item), { maxWidth: 310, closeButton: true, autoPan: true });
+    marker.on('mouseover', () => marker.openPopup());
+    marker.on('click', () => marker.openPopup());
+
+    if (!markersByLayer[item.layer]) markersByLayer[item.layer] = L.layerGroup();
+    marker.addTo(markersByLayer[item.layer]);
+    markerById[item.id] = marker;
+  });
+
+  Object.values(markersByLayer).forEach(g => g.addTo(map));
+
+  // ---------- 左側清單 ----------
+  const layerListEl = document.getElementById('layer-list');
+  const groups = {};
+  CASES.forEach(item => { (groups[item.layer] = groups[item.layer] || []).push(item); });
+
+  document.getElementById('total-count').textContent = `共 ${CASES.length} 筆案件`;
+
+  Object.entries(groups).forEach(([layerName, items]) => {
+    const color = LAYER_COLORS[layerName] || '#666';
+    const groupEl = document.createElement('div');
+    groupEl.className = 'layer-group';
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'layer-group-title';
+    titleEl.innerHTML = `
+      <input type="checkbox" checked data-layer="${layerName}">
+      <span class="swatch" style="background:${color}"></span>
+      <span>${layerName}</span>
+      <span class="cnt">${items.length}</span>
+    `;
+    groupEl.appendChild(titleEl);
+
+    const listWrap = document.createElement('div');
+    items.forEach(item => {
+      const overdueDays = parseFloat(item['逾期天數']) || 0;
+      const el = document.createElement('div');
+      el.className = 'case-item';
+      el.innerHTML = `${item.title}${overdueDays > 0 ? `<span class="overdue-tag">逾期${Math.round(overdueDays)}天</span>` : ''}`;
+      el.addEventListener('click', () => {
+        map.setView([item.lat, item.lng], 17, { animate: true });
+        markerById[item.id].openPopup();
+        if (window.innerWidth <= 720) document.getElementById('sidebar').classList.remove('open');
+      });
+      listWrap.appendChild(el);
+    });
+    groupEl.appendChild(listWrap);
+
+    titleEl.querySelector('input').addEventListener('change', (e) => {
+      if (e.target.checked) { map.addLayer(markersByLayer[layerName]); listWrap.style.display = ''; }
+      else { map.removeLayer(markersByLayer[layerName]); listWrap.style.display = 'none'; }
+    });
+    titleEl.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      listWrap.style.display = listWrap.style.display === 'none' ? '' : 'none';
+    });
+
+    layerListEl.appendChild(groupEl);
+  });
+}
+
+// ---------- 讀取資料（自動抓最新的 data.json） ----------
+fetch('./data.json?t=' + Date.now())
+  .then(res => {
+    if (!res.ok) throw new Error('無法讀取 data.json');
+    return res.json();
+  })
+  .then(payload => {
+    document.getElementById('loading-msg').style.display = 'none';
+    const cases = payload.cases || [];
+    if (payload.generated_at) {
+      const d = new Date(payload.generated_at);
+      document.getElementById('updated-time').textContent =
+        '資料更新於 ' + d.toLocaleString('zh-TW', { hour12: false });
+    }
+    renderMap(cases);
+  })
+  .catch(err => {
+    document.getElementById('loading-msg').style.display = 'none';
+    document.getElementById('error-msg').style.display = 'block';
+    console.error(err);
+  });
+
+// ---------- 手機版 sidebar 開關 ----------
+document.getElementById('sidebar-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+
+</body>
+</html>

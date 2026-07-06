@@ -11,81 +11,39 @@
 
   #app { display: flex; height: 100vh; }
 
-  /* ---------- 左側圖層清單 ---------- */
-  #sidebar {
-    width: 300px;
-    flex-shrink: 0;
-    background: #fff;
-    border-right: 1px solid #ddd;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  #sidebar-header {
-    padding: 14px 16px;
-    border-bottom: 1px solid #eee;
-    font-size: 16px;
-    font-weight: 700;
-    color: #1a1a1a;
-  }
+  #sidebar { width: 300px; flex-shrink: 0; background: #fff; border-right: 1px solid #ddd; display: flex; flex-direction: column; overflow: hidden; }
+  #sidebar-header { padding: 14px 16px; border-bottom: 1px solid #eee; font-size: 16px; font-weight: 700; color: #1a1a1a; }
   #sidebar-header .count { font-size: 12px; color: #888; font-weight: 400; margin-top: 2px; }
   #sidebar-header .updated { font-size: 11px; color: #aaa; font-weight: 400; margin-top: 2px; }
 
   #layer-list { overflow-y: auto; flex: 1; }
-  #loading-msg, #error-msg { padding: 16px; font-size: 13px; color: #888; }
-  #error-msg { color: #d9534f; display: none; }
+  #unlocated-section { border-top: 2px solid #f0f0f0; }
+  #unlocated-section .layer-group-title { background: #fff8e1; }
 
   .layer-group { border-bottom: 1px solid #f0f0f0; }
-  .layer-group-title {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 16px; cursor: pointer; font-size: 14px; font-weight: 600;
-    color: #333; background: #fafafa;
-  }
+  .layer-group-title { display: flex; align-items: center; gap: 8px; padding: 10px 16px; cursor: pointer; font-size: 14px; font-weight: 600; color: #333; background: #fafafa; }
   .layer-group-title:hover { background: #f0f0f0; }
   .layer-group-title .swatch { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
   .layer-group-title .cnt { margin-left: auto; color: #999; font-weight: 400; font-size: 12px; }
 
-  .case-item {
-    padding: 8px 16px 8px 34px;
-    font-size: 13px;
-    color: #444;
-    cursor: pointer;
-    border-bottom: 1px solid #f7f7f7;
-    line-height: 1.4;
-  }
+  .case-item { padding: 8px 16px 8px 34px; font-size: 13px; color: #444; cursor: pointer; border-bottom: 1px solid #f7f7f7; line-height: 1.4; }
   .case-item:hover { background: #f2f6ff; }
   .case-item.active { background: #dbe8ff; font-weight: 600; }
   .case-item .overdue-tag { color: #d9534f; font-size: 11px; margin-left: 4px; }
+  .case-item .reported-tag { color: #1e7e34; font-size: 11px; margin-left: 4px; }
 
-  /* ---------- 地圖 ---------- */
   #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
 
-  /* ---------- 自訂彈出小卡片 ---------- */
-  .leaflet-popup-content-wrapper {
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.28);
-    padding: 0;
-  }
+  .leaflet-popup-content-wrapper { background: #ffffff; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.28); padding: 0; }
   .leaflet-popup-content { margin: 0; width: 290px !important; }
   .leaflet-popup-tip { background: #ffffff; }
 
-  .card-header {
-    padding: 10px 34px 8px 12px;
-    font-size: 13.5px;
-    font-weight: 600;
-    line-height: 1.4;
-    color: #202020;
-  }
+  .card-header { padding: 10px 34px 8px 12px; font-size: 13.5px; font-weight: 600; line-height: 1.4; color: #202020; }
 
   .card-photo-wrap { position: relative; width: 100%; height: 150px; background: #111; overflow: hidden; }
   .card-photo-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .card-photo-empty { width: 100%; height: 150px; background: #eee; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 12px; }
-  .photo-nav {
-    position: absolute; top: 50%; transform: translateY(-50%);
-    background: rgba(0,0,0,0.4); color: #fff; border: none;
-    width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 14px;
-  }
+  .photo-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.4); color: #fff; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 14px; }
   .photo-nav.prev { left: 6px; } .photo-nav.next { right: 6px; }
   .photo-count { position: absolute; bottom: 6px; right: 8px; background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; padding: 2px 7px; border-radius: 10px; }
 
@@ -96,15 +54,14 @@
   .card-info .value.overdue { color: #d9534f; font-weight: 700; }
   .card-info .value.empty { color: #bbb; }
 
+  .card-report-area { padding: 4px 12px 12px 12px; }
+  .report-btn { width: 100%; padding: 9px; border: none; border-radius: 6px; background: #F09300; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .report-btn:hover { background: #d97f00; }
+  .report-done { width: 100%; padding: 9px; border-radius: 6px; background: #e6f4ea; color: #1e7e34; font-size: 13px; font-weight: 600; text-align: center; }
+
   .card-coords { font-size: 10.5px; color: #aaa; padding: 0 12px 10px 12px; }
 
-  /* ---------- 手機版：sidebar 收合 ---------- */
-  #sidebar-toggle {
-    display: none;
-    position: absolute; top: 10px; left: 10px; z-index: 1000;
-    background: #fff; border: 1px solid #ccc; border-radius: 6px;
-    width: 38px; height: 38px; font-size: 18px; cursor: pointer;
-  }
+  #sidebar-toggle { display: none; position: absolute; top: 10px; left: 10px; z-index: 1000; background: #fff; border: 1px solid #ccc; border-radius: 6px; width: 38px; height: 38px; font-size: 18px; cursor: pointer; }
   @media (max-width: 720px) {
     #sidebar { position: absolute; z-index: 999; height: 100%; transform: translateX(-100%); transition: transform .2s; box-shadow: 4px 0 12px rgba(0,0,0,0.2); }
     #sidebar.open { transform: translateX(0); }
@@ -119,10 +76,8 @@
     <div id="sidebar-header">
       路面案件管理地圖
       <div class="count" id="total-count"></div>
-      <div class="updated" id="updated-time"></div>
+      <div class="updated" id="updated-time">即時資料，自動同步</div>
     </div>
-    <div id="loading-msg">資料載入中…</div>
-    <div id="error-msg">資料載入失敗，請稍後重新整理頁面。</div>
     <div id="layer-list"></div>
   </div>
   <div style="position:relative; flex:1;">
@@ -132,29 +87,45 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCKsEWAsOEibsBy9JTM6jDluTZPa0mR7CE",
+  authDomain: "work-map-1cec7.firebaseapp.com",
+  projectId: "work-map-1cec7",
+  storageBucket: "work-map-1cec7.firebasestorage.app",
+  messagingSenderId: "406421110375",
+  appId: "1:406421110375:web:f4c44788847f792aee5ec2"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 const LAYER_COLORS = {
   "催辦案件": "#4285F4",
   "危險案件": "#DB4436",
   "近期狂催且有危險案件": "#9C27B0",
   "逾期案件": "#F09300"
 };
+const LAYER_LABELS = {
+  "催辦案件": "催",
+  "危險案件": "危",
+  "近期狂催且有危險案件": "急",
+  "逾期案件": "逾"
+};
 
 const map = L.map('map', { zoomControl: false }).setView([24.1435, 120.6480], 13);
 L.control.zoom({ position: 'topright' }).addTo(map);
-
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors',
-  maxZoom: 19
+  attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
 }).addTo(map);
 
-function makeIcon(color) {
+function makeIcon(color, label) {
   return L.divIcon({
     className: '',
-    html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>`,
-    iconSize: [22, 22],
-    iconAnchor: [11, 22],
-    popupAnchor: [0, -22]
+    html: `<div style="width:26px;height:26px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;">${label}</div>`,
+    iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -13]
   });
 }
 
@@ -163,14 +134,26 @@ function fieldRow(label, value, isOverdue) {
   return `<div class="row"><div class="label">${label}</div><div class="value ${cls}">${value || '沒有值'}</div></div>`;
 }
 
+window.reportConstruction = async function(id) {
+  if (!confirm('確定要通報施工嗎？')) return;
+  try {
+    await updateDoc(doc(db, 'cases', id), {
+      constructionReported: true,
+      reportedAt: serverTimestamp()
+    });
+  } catch (e) {
+    alert('通報失敗：' + e.message);
+  }
+};
+
 function popupHtml(item) {
-  const overdueDays = parseFloat(item['逾期天數']) || 0;
+  const overdueDays = parseFloat(item.overdueDays) || 0;
   let photoHtml;
   if (item.photos && item.photos.length > 0) {
     const pid = 'ph_' + item.id;
     photoHtml = `
       <div class="card-photo-wrap" id="${pid}">
-        <img src="${item.photos[0]}" data-idx="0" referrerpolicy="no-referrer" crossorigin="anonymous" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-photo-empty\\'>圖片暫時無法顯示</div>')">
+        <img src="${item.photos[0]}" data-idx="0" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-photo-empty\\'>圖片暫時無法顯示</div>')">
         ${item.photos.length > 1 ? `
           <button class="photo-nav prev" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, -1)">‹</button>
           <button class="photo-nav next" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, 1)">›</button>
@@ -181,16 +164,21 @@ function popupHtml(item) {
     photoHtml = `<div class="card-photo-empty">無照片</div>`;
   }
 
+  const reportArea = item.constructionReported
+    ? `<div class="card-report-area"><div class="report-done">✅ 已通報施工${item.reportedAt ? '' : ''}</div></div>`
+    : `<div class="card-report-area"><button class="report-btn" onclick="reportConstruction('${item.id}')">通報施工</button></div>`;
+
   return `
     <div class="card-header">${item.title}</div>
     ${photoHtml}
     <div class="card-info">
-      ${fieldRow('位置', item['位置'])}
-      ${fieldRow('建議人', item['建議人'])}
-      ${fieldRow('完成日期', item['完成日期'])}
-      ${fieldRow('逾期天數', item['逾期天數'] ? Math.round(overdueDays) : '', overdueDays > 0)}
-      ${fieldRow('狀態', item['狀態'])}
+      ${fieldRow('位置', item.location)}
+      ${fieldRow('建議人', item.suggester)}
+      ${fieldRow('完成日期', item.completedDate)}
+      ${fieldRow('逾期天數', item.overdueDays ? Math.round(overdueDays) : '', overdueDays > 0)}
+      ${fieldRow('狀態', item.status)}
     </div>
+    ${reportArea}
     <div class="card-coords">📍 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
   `;
 }
@@ -207,14 +195,29 @@ window.changePhoto = function(wrapId, photos, dir) {
   if (countEl) countEl.textContent = `${idx + 1} / ${photos.length}`;
 };
 
-function renderMap(CASES) {
-  const markersByLayer = {};
-  const markerById = {};
+let markersByLayer = {};
+let markerById = {};
 
-  CASES.forEach(item => {
-    if (item.lat == null || item.lng == null) return;
+function clearMap() {
+  Object.values(markersByLayer).forEach(g => map.removeLayer(g));
+  markersByLayer = {};
+  markerById = {};
+}
+
+function renderAll(cases) {
+  clearMap();
+  document.getElementById('layer-list').innerHTML = '';
+
+  const located = cases.filter(c => c.lat != null && c.lng != null);
+  const unlocated = cases.filter(c => c.lat == null || c.lng == null);
+
+  document.getElementById('total-count').textContent =
+    `共 ${cases.length} 筆案件（${unlocated.length} 筆未定位）`;
+
+  located.forEach(item => {
     const color = LAYER_COLORS[item.layer] || '#666';
-    const marker = L.marker([item.lat, item.lng], { icon: makeIcon(color) });
+    const label = LAYER_LABELS[item.layer] || '?';
+    const marker = L.marker([item.lat, item.lng], { icon: makeIcon(color, label) });
     marker.bindPopup(popupHtml(item), { maxWidth: 310, closeButton: true, autoPan: true });
     marker.on('mouseover', () => marker.openPopup());
     marker.on('click', () => marker.openPopup());
@@ -223,25 +226,20 @@ function renderMap(CASES) {
     marker.addTo(markersByLayer[item.layer]);
     markerById[item.id] = marker;
   });
-
   Object.values(markersByLayer).forEach(g => g.addTo(map));
 
-  // ---------- 左側清單 ----------
   const layerListEl = document.getElementById('layer-list');
   const groups = {};
-  CASES.forEach(item => { (groups[item.layer] = groups[item.layer] || []).push(item); });
-
-  document.getElementById('total-count').textContent = `共 ${CASES.length} 筆案件`;
+  located.forEach(item => { (groups[item.layer] = groups[item.layer] || []).push(item); });
 
   Object.entries(groups).forEach(([layerName, items]) => {
     const color = LAYER_COLORS[layerName] || '#666';
     const groupEl = document.createElement('div');
     groupEl.className = 'layer-group';
-
     const titleEl = document.createElement('div');
     titleEl.className = 'layer-group-title';
     titleEl.innerHTML = `
-      <input type="checkbox" checked data-layer="${layerName}">
+      <input type="checkbox" checked>
       <span class="swatch" style="background:${color}"></span>
       <span>${layerName}</span>
       <span class="cnt">${items.length}</span>
@@ -250,10 +248,10 @@ function renderMap(CASES) {
 
     const listWrap = document.createElement('div');
     items.forEach(item => {
-      const overdueDays = parseFloat(item['逾期天數']) || 0;
+      const overdueDays = parseFloat(item.overdueDays) || 0;
       const el = document.createElement('div');
       el.className = 'case-item';
-      el.innerHTML = `${item.title}${overdueDays > 0 ? `<span class="overdue-tag">逾期${Math.round(overdueDays)}天</span>` : ''}`;
+      el.innerHTML = `${item.title}${overdueDays > 0 ? `<span class="overdue-tag">逾期${Math.round(overdueDays)}天</span>` : ''}${item.constructionReported ? `<span class="reported-tag">已通報</span>` : ''}`;
       el.addEventListener('click', () => {
         document.querySelectorAll('.case-item.active').forEach(n => n.classList.remove('active'));
         el.classList.add('active');
@@ -276,31 +274,30 @@ function renderMap(CASES) {
 
     layerListEl.appendChild(groupEl);
   });
+
+  if (unlocated.length > 0) {
+    const sec = document.createElement('div');
+    sec.id = 'unlocated-section';
+    sec.innerHTML = `<div class="layer-group-title"><span>⚠️ 尚未定位的案件</span><span class="cnt">${unlocated.length}</span></div>`;
+    const listWrap = document.createElement('div');
+    unlocated.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'case-item';
+      el.style.cursor = 'default';
+      el.innerHTML = `${item.title || '（未命名）'}<span style="color:#aaa;font-size:11px;margin-left:4px;">未定位</span>`;
+      listWrap.appendChild(el);
+    });
+    sec.appendChild(listWrap);
+    layerListEl.appendChild(sec);
+  }
 }
 
-// ---------- 讀取資料（自動抓最新的 data.json） ----------
-fetch('./data.json?t=' + Date.now())
-  .then(res => {
-    if (!res.ok) throw new Error('無法讀取 data.json');
-    return res.json();
-  })
-  .then(payload => {
-    document.getElementById('loading-msg').style.display = 'none';
-    const cases = payload.cases || [];
-    if (payload.generated_at) {
-      const d = new Date(payload.generated_at);
-      document.getElementById('updated-time').textContent =
-        '資料更新於 ' + d.toLocaleString('zh-TW', { hour12: false });
-    }
-    renderMap(cases);
-  })
-  .catch(err => {
-    document.getElementById('loading-msg').style.display = 'none';
-    document.getElementById('error-msg').style.display = 'block';
-    console.error(err);
-  });
+onSnapshot(collection(db, 'cases'), (snapshot) => {
+  const cases = [];
+  snapshot.forEach(d => cases.push({ id: d.id, ...d.data() }));
+  renderAll(cases);
+});
 
-// ---------- 手機版 sidebar 開關 ----------
 document.getElementById('sidebar-toggle').addEventListener('click', () => {
   document.getElementById('sidebar').classList.toggle('open');
 });

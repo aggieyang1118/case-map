@@ -159,7 +159,11 @@
     </div>
     <div class="field">
       <label>位置（文字地址）</label>
-      <input type="text" id="f_location" placeholder="例如：台中市南屯區黎明東街63巷7號前">
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="f_location" placeholder="例如：台中市南屯區黎明東街63巷7號前" style="flex:1;">
+        <button type="button" id="geocodeBtn" class="btn btn-secondary" style="white-space:nowrap;">🔍 定位</button>
+      </div>
+      <div id="geocodeMsg" style="font-size:12px;color:#999;margin-top:4px;"></div>
     </div>
 
     <div class="field">
@@ -399,6 +403,7 @@ document.getElementById('cancelBtn').addEventListener('click', closeForm);
 function openForm(id) {
   editingId = id;
   pendingPhotoFiles = [];
+  document.getElementById('geocodeMsg').textContent = '';
   const overlay = document.getElementById('formOverlay');
   overlay.style.display = 'flex';
 
@@ -477,6 +482,53 @@ function updateCoordHint(lat, lng) {
     hint.textContent = `目前座標：${lat.toFixed(6)}, ${lng.toFixed(6)}（點地圖可重新設定）`;
   }
 }
+
+function moveToLocation(lat, lng, zoom) {
+  if (!pickMap) return;
+  pickMap.setView([lat, lng], zoom || 17);
+  if (pickMarker) { pickMap.removeLayer(pickMarker); }
+  pickMarker = L.marker([lat, lng]).addTo(pickMap);
+  updateCoordHint(lat, lng);
+}
+
+async function geocodeAddress() {
+  const msgEl = document.getElementById('geocodeMsg');
+  let address = document.getElementById('f_location').value.trim();
+  if (!address) {
+    msgEl.style.color = '#d9534f';
+    msgEl.textContent = '請先輸入位置文字地址';
+    return;
+  }
+  // 如果地址沒寫城市，幫忙補上「台中市」提高定位準確度
+  if (!/台中|臺中/.test(address)) {
+    address = '台中市' + address;
+  }
+  msgEl.style.color = '#999';
+  msgEl.textContent = '定位中...';
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=tw&limit=1&q=${encodeURIComponent(address)}`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'zh-TW' } });
+    const results = await res.json();
+    if (results.length === 0) {
+      msgEl.style.color = '#d9534f';
+      msgEl.textContent = '找不到這個地址，請直接在地圖上點選位置';
+      return;
+    }
+    const lat = parseFloat(results[0].lat);
+    const lng = parseFloat(results[0].lon);
+    moveToLocation(lat, lng, 17);
+    msgEl.style.color = '#1e7e34';
+    msgEl.textContent = '✅ 已跳到查詢位置，請確認正確、不對可直接在地圖上拖曳點選調整';
+  } catch (e) {
+    msgEl.style.color = '#d9534f';
+    msgEl.textContent = '定位服務暫時無法使用，請直接在地圖上點選位置';
+  }
+}
+
+document.getElementById('geocodeBtn').addEventListener('click', geocodeAddress);
+document.getElementById('f_location').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); geocodeAddress(); }
+});
 
 function renderPhotoList() {
   const listEl = document.getElementById('photoList');

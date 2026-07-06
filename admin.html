@@ -7,29 +7,29 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif; background: #f7f4ee; color: #3a372f; -webkit-font-smoothing: antialiased; }
+  body { margin: 0; font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif; background: #f4f5f7; color: #222; }
 
   /* 密碼畫面 */
   #gate { position: fixed; inset: 0; background: #fff; display: flex; align-items: center; justify-content: center; z-index: 999; }
   #gate .box { text-align: center; }
   #gate input { font-size: 16px; padding: 10px 14px; border: 1px solid #ccc; border-radius: 6px; width: 220px; }
-  #gate button { font-size: 16px; padding: 10px 20px; border: none; background: #3d6b66; color: #fff; border-radius: 6px; margin-left: 8px; cursor: pointer; }
+  #gate button { font-size: 16px; padding: 10px 20px; border: none; background: #4285F4; color: #fff; border-radius: 6px; margin-left: 8px; cursor: pointer; }
   #gate .err { color: #d9534f; margin-top: 10px; font-size: 13px; height: 18px; }
 
   #app { display: none; max-width: 1100px; margin: 0 auto; padding: 20px; }
-  h1 { font-size: 21px; margin-bottom: 4px; font-weight: 700; color: #2b2b28; letter-spacing: 0.3px; }
-  .sub { color: #918d80; font-size: 13px; margin-bottom: 20px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #888; font-size: 13px; margin-bottom: 20px; }
 
   .top-actions { margin-bottom: 16px; display: flex; gap: 10px; }
   .btn { padding: 9px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
-  .btn-primary { background: #3d6b66; color: #fff; }
+  .btn-primary { background: #4285F4; color: #fff; }
   .btn-secondary { background: #eee; color: #333; }
   .btn-danger { background: #fdecea; color: #d9534f; }
 
-  table { width: 100%; border-collapse: collapse; background: #fffefb; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(80,70,40,0.08); }
-  th, td { text-align: left; padding: 11px 14px; font-size: 13px; border-bottom: 1px solid #f2ede0; }
-  th { background: #f7f2e6; color: #7a7566; font-weight: 600; }
-  tr:hover td { background: #fbf7ee; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  th, td { text-align: left; padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+  th { background: #fafafa; color: #666; font-weight: 600; }
+  tr:hover td { background: #f7faff; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
   .badge-nogeo { background: #fff3cd; color: #92700a; }
   .badge-ok { background: #e6f4ea; color: #1e7e34; }
@@ -37,7 +37,7 @@
 
   /* 表單彈窗 */
   #formOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: flex-start; justify-content: center; z-index: 500; overflow-y: auto; padding: 30px 12px; }
-  #formPanel { background: #fffefb; border-radius: 14px; width: 100%; max-width: 640px; padding: 26px; box-shadow: 0 12px 40px rgba(60,50,30,0.25); }
+  #formPanel { background: #fff; border-radius: 10px; width: 100%; max-width: 640px; padding: 24px; }
   #formPanel h2 { margin-top: 0; font-size: 18px; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; font-weight: 600; }
@@ -56,7 +56,7 @@
 
   .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
-  #uploadStatus { font-size: 12px; color: #3d6b66; margin-top: 6px; }
+  #uploadStatus { font-size: 12px; color: #4285F4; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -76,15 +76,15 @@
 <div id="app">
   <h1>案件後台管理</h1>
   <div class="sub" id="statsLine">載入中...</div>
-
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#fffefb;padding:10px 14px;border-radius:8px;box-shadow:0 1px 4px rgba(80,70,40,0.08);max-width:360px;">
-    <label style="font-size:13px;color:#7a7566;white-space:nowrap;">你的名字：</label>
-    <input type="text" id="editorNameInput" placeholder="例如：Aggie Yang" style="flex:1;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+  <div style="margin-bottom:12px;">
+    <a href="index.html" style="font-size:13px;color:#4285F4;text-decoration:none;">← 返回地圖首頁</a>
+    <a href="#" id="togglePwSection" style="font-size:13px;color:#999;text-decoration:none;margin-left:16px;">🔒 變更後台密碼</a>
+    <a href="#" id="toggleLogSection" style="font-size:13px;color:#999;text-decoration:none;margin-left:16px;">📋 登入紀錄</a>
   </div>
 
-  <div style="margin-bottom:12px;">
-    <a href="index.html" style="font-size:13px;color:#3d6b66;text-decoration:none;">← 返回地圖首頁</a>
-    <a href="#" id="togglePwSection" style="font-size:13px;color:#999;text-decoration:none;margin-left:16px;">🔒 變更後台密碼</a>
+  <div id="logSection" style="display:none;background:#fff;border-radius:8px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);max-width:420px;max-height:260px;overflow-y:auto;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">最近登入紀錄（IP 位置與時間）</div>
+    <div id="logList" style="font-size:12px;color:#555;">載入中...</div>
   </div>
 
   <div id="pwSection" style="display:none;background:#fff;border-radius:8px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);max-width:360px;">
@@ -95,22 +95,22 @@
   </div>
 
   <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid #ddd;">
-    <button class="admin-tab active" data-admintab="repair" style="flex:1;padding:10px;border:none;background:#fff;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid #3d6b66;">搶修案件管理</button>
-    <button class="admin-tab" data-admintab="assess" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">評估案件管理</button>
+    <button class="admin-tab active" data-admintab="road" style="flex:1;padding:10px;border:none;background:#fff;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid #4285F4;">路面案件管理</button>
+    <button class="admin-tab" data-admintab="contract" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">標案案件管理</button>
   </div>
 
   <div class="top-actions">
     <button class="btn btn-primary" id="addBtn">＋ 新增案件</button>
-    <input type="text" id="searchBox" placeholder="🔍 搜尋標題、位置、廠商、標案名稱..." style="flex:1;max-width:340px;padding:9px 14px;border:1px solid #ccc;border-radius:6px;font-size:14px;">
+    <input type="text" id="searchBox" placeholder="🔍 搜尋標題、位置、建議人、廠商..." style="flex:1;max-width:340px;padding:9px 14px;border:1px solid #ccc;border-radius:6px;font-size:14px;">
   </div>
 
   <table>
     <thead>
       <tr>
         <th>標題</th>
-        <th>廠商</th>
-        <th>標案名稱</th>
+        <th>分類</th>
         <th>位置</th>
+        <th>逾期天數</th>
         <th>定位狀態</th>
         <th>操作</th>
       </tr>
@@ -128,30 +128,45 @@
       <label>標題</label>
       <input type="text" id="f_title" placeholder="例如：瀝青膠泥-黎明東街63巷7號前-2026/3/24">
     </div>
-
+    <div id="roadFields">
     <div class="field-row">
       <div class="field">
-        <label>標案名稱</label>
-        <input type="text" id="f_contractName" placeholder="例如：113年度南屯區道路養護標案">
+        <label>分類</label>
+        <select id="f_layer">
+          <option value="近期狂催且有危險案件">近期狂催且有危險案件</option>
+          <option value="危險案件">危險案件</option>
+          <option value="催辦案件">催辦案件</option>
+          <option value="逾期案件">逾期案件</option>
+        </select>
       </div>
       <div class="field">
-        <label>廠商</label>
-        <input type="text" id="f_vendor" placeholder="例如：某某營造有限公司">
+        <label>建議人</label>
+        <input type="text" id="f_suggester">
       </div>
     </div>
-    <div id="caseTypeHint" style="font-size:12px;color:#999;margin-bottom:14px;"></div>
-
-    <div id="subCategoryField" class="field" style="display:none;">
-      <label>分類</label>
-      <select id="f_subCategory">
-        <option value="近期狂催且有危險案件">近期狂催且有危險案件（超急）</option>
-        <option value="危險案件">危險案件</option>
-        <option value="催辦案件">催辦案件</option>
-        <option value="逾期案件">逾期案件</option>
-      </select>
     </div>
 
-    <div class="field">      <label>位置（文字地址）</label>
+    <div id="contractFields" style="display:none;">
+      <div class="field-row">
+        <div class="field">
+          <label>標案名稱</label>
+          <input type="text" id="f_contractName" placeholder="例如：113年度南屯區道路養護標案">
+        </div>
+        <div class="field">
+          <label>廠商</label>
+          <input type="text" id="f_vendor" placeholder="例如：某某營造有限公司">
+        </div>
+      </div>
+      <div class="field">
+        <label>案件性質</label>
+        <select id="f_caseType">
+          <option value="評估案件">評估案件</option>
+          <option value="搶修案件">搶修案件</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>位置（文字地址）</label>
       <div style="display:flex;gap:6px;">
         <input type="text" id="f_location" placeholder="例如：台中市南屯區黎明東街63巷7號前" style="flex:1;">
         <button type="button" id="geocodeBtn" class="btn btn-secondary" style="white-space:nowrap;">🔍 定位</button>
@@ -170,8 +185,20 @@
       </div>
     </div>
 
+    <div id="roadFields2">
+    <div class="field-row">
+      <div class="field">
+        <label>完成日期</label>
+        <input type="text" id="f_completedDate" placeholder="例如：2026/7/1 或留空">
+      </div>
+      <div class="field">
+        <label>逾期天數</label>
+        <input type="text" id="f_overdueDays" placeholder="例如：30">
+      </div>
+    </div>
     <div class="field">
       <label><input type="checkbox" id="f_reported" style="width:auto;margin-right:6px;">已通報施工（可手動勾選/取消）</label>
+    </div>
     </div>
 
     <div class="field">
@@ -278,6 +305,38 @@ if (sessionStorage.getItem('admin_ok') === '1') {
   initAfterUnlock();
 }
 
+let logLoaded = false;
+document.getElementById('toggleLogSection').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const sec = document.getElementById('logSection');
+  sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
+  if (sec.style.display === 'block' && !logLoaded) {
+    logLoaded = true;
+    try {
+      const q = query(collection(db, 'access_log'), orderBy('at', 'desc'), limit(20));
+      onSnapshot(q, (snapshot) => {
+        const listEl = document.getElementById('logList');
+        listEl.innerHTML = '';
+        if (snapshot.empty) {
+          listEl.textContent = '尚無紀錄';
+          return;
+        }
+        snapshot.forEach(d => {
+          const data = d.data();
+          const time = data.at ? data.at.toDate().toLocaleString('zh-TW', { hour12: false }) : '（時間記錄中）';
+          const row = document.createElement('div');
+          row.style.padding = '4px 0';
+          row.style.borderBottom = '1px solid #f5f5f5';
+          row.textContent = `${time} — IP：${data.ip || '未知'}`;
+          listEl.appendChild(row);
+        });
+      });
+    } catch (err) {
+      document.getElementById('logList').textContent = '載入紀錄失敗：' + err.message;
+    }
+  }
+});
+
 document.getElementById('togglePwSection').addEventListener('click', (e) => {
   e.preventDefault();
   const sec = document.getElementById('pwSection');
@@ -305,8 +364,9 @@ document.getElementById('savePwBtn').addEventListener('click', async () => {
 });
 
 // ---------- 全域狀態 ----------
+let allCases = [];
 let allContractCases = [];
-let currentAdminTab = 'repair';
+let currentAdminTab = 'road';
 let editingId = null;
 let pendingPhotoFiles = [];
 let existingPhotos = [];
@@ -314,22 +374,20 @@ let pickMarker = null;
 let pickMap = null;
 
 function initAfterUnlock() {
+  const q1 = query(collection(db, 'cases'), orderBy('createdAt', 'desc'));
+  onSnapshot(q1, (snapshot) => {
+    allCases = [];
+    snapshot.forEach(docSnap => allCases.push({ id: docSnap.id, ...docSnap.data() }));
+    if (currentAdminTab === 'road') renderTable();
+  });
+
   const q2 = query(collection(db, 'contract_cases'), orderBy('createdAt', 'desc'));
   onSnapshot(q2, (snapshot) => {
     allContractCases = [];
     snapshot.forEach(docSnap => allContractCases.push({ id: docSnap.id, ...docSnap.data() }));
-    renderTable();
+    if (currentAdminTab === 'contract') renderTable();
   });
 }
-
-// ---------- 編輯者姓名（記在瀏覽器裡，方便下次不用重打） ----------
-const editorNameInput = document.getElementById('editorNameInput');
-editorNameInput.value = localStorage.getItem('editorName') || '';
-editorNameInput.addEventListener('input', () => {
-  localStorage.setItem('editorName', editorNameInput.value.trim());
-});
-
-
 
 document.getElementById('searchBox').addEventListener('input', renderTable);
 
@@ -340,31 +398,45 @@ document.querySelectorAll('.admin-tab').forEach(btn => {
     document.querySelectorAll('.admin-tab').forEach(b => {
       const active = b === btn;
       b.style.background = active ? '#fff' : '#fafafa';
-      b.style.borderBottom = active ? '2px solid #3d6b66' : '2px solid transparent';
+      b.style.borderBottom = active ? '2px solid #4285F4' : '2px solid transparent';
       b.style.color = active ? '#222' : '#888';
     });
+    document.querySelector('thead tr').innerHTML = currentAdminTab === 'road'
+      ? `<th>標題</th><th>分類</th><th>位置</th><th>逾期天數</th><th>定位狀態</th><th>操作</th>`
+      : `<th>標題</th><th>廠商</th><th>標案名稱</th><th>案件性質</th><th>定位狀態</th><th>操作</th>`;
     renderTable();
   });
 });
 
-const TAB_CASETYPE = { repair: '搶修案件', assess: '評估案件' };
+const ROAD_LAYER_ORDER = ["近期狂催且有危險案件", "危險案件", "催辦案件", "逾期案件"];
 
 function renderTable() {
   const tbody = document.getElementById('caseTableBody');
   tbody.innerHTML = '';
-  let list = allContractCases.filter(c => c.caseType === TAB_CASETYPE[currentAdminTab]);
+  let list = currentAdminTab === 'road' ? [...allCases] : [...allContractCases];
+
+  // 依分類優先順序排序（僅路面案件套用固定順序）
+  if (currentAdminTab === 'road') {
+    list.sort((a, b) => {
+      const ai = ROAD_LAYER_ORDER.indexOf(a.layer);
+      const bi = ROAD_LAYER_ORDER.indexOf(b.layer);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+  }
 
   // 搜尋過濾
   const keyword = document.getElementById('searchBox').value.trim().toLowerCase();
   if (keyword) {
     list = list.filter(c => {
-      const fields = [c.title, c.location, c.vendor, c.contractName, c.status];
+      const fields = currentAdminTab === 'road'
+        ? [c.title, c.location, c.suggester, c.status]
+        : [c.title, c.location, c.vendor, c.contractName, c.caseType, c.status];
       return fields.some(f => (f || '').toLowerCase().includes(keyword));
     });
   }
 
   const withGeo = list.filter(c => c.lat != null).length;
-  const label = TAB_CASETYPE[currentAdminTab] || '';
+  const label = currentAdminTab === 'road' ? '案件' : '標案案件';
   document.getElementById('statsLine').textContent = keyword
     ? `搜尋「${document.getElementById('searchBox').value.trim()}」找到 ${list.length} 筆`
     : `共 ${list.length} 筆${label}，其中 ${withGeo} 筆已定位、${list.length - withGeo} 筆尚未定位`;
@@ -373,17 +445,31 @@ function renderTable() {
     const tr = document.createElement('tr');
     const hasGeo = c.lat != null && c.lng != null;
     const geoBadge = hasGeo ? '<span class="badge badge-ok">已定位</span>' : '<span class="badge badge-nogeo">未定位</span>';
-    tr.innerHTML = `
-      <td>${escapeHtml(c.title || '')}${c.constructionReported ? ' <span class="badge badge-ok">已通報</span>' : ''}${c.lastEditedBy ? `<div style="font-size:10.5px;color:#aaa;">edit by ${escapeHtml(c.lastEditedBy)}</div>` : ''}</td>
-      <td>${escapeHtml(c.vendor || '')}</td>
-      <td>${escapeHtml(c.contractName || '')}</td>
-      <td>${escapeHtml(c.location || '')}</td>
-      <td>${geoBadge}</td>
-      <td class="row-actions">
-        <button class="btn btn-secondary" data-edit="${c.id}">編輯</button>
-        <button class="btn btn-danger" data-del="${c.id}">刪除</button>
-      </td>
-    `;
+    if (currentAdminTab === 'road') {
+      tr.innerHTML = `
+        <td>${escapeHtml(c.title || '')}</td>
+        <td>${escapeHtml(c.layer || '')}</td>
+        <td>${escapeHtml(c.location || '')}</td>
+        <td>${escapeHtml(String(c.overdueDays || ''))}</td>
+        <td>${geoBadge}</td>
+        <td class="row-actions">
+          <button class="btn btn-secondary" data-edit="${c.id}">編輯</button>
+          <button class="btn btn-danger" data-del="${c.id}">刪除</button>
+        </td>
+      `;
+    } else {
+      tr.innerHTML = `
+        <td>${escapeHtml(c.title || '')}</td>
+        <td>${escapeHtml(c.vendor || '')}</td>
+        <td>${escapeHtml(c.contractName || '')}</td>
+        <td>${escapeHtml(c.caseType || '')}</td>
+        <td>${geoBadge}</td>
+        <td class="row-actions">
+          <button class="btn btn-secondary" data-edit="${c.id}">編輯</button>
+          <button class="btn btn-danger" data-del="${c.id}">刪除</button>
+        </td>
+      `;
+    }
     tbody.appendChild(tr);
   });
 
@@ -401,7 +487,8 @@ function escapeHtml(str) {
 
 async function deleteCase(id) {
   if (!confirm('確定要刪除這筆案件嗎？此動作無法復原。')) return;
-  await deleteDoc(doc(db, 'contract_cases', id));
+  const col = currentAdminTab === 'road' ? 'cases' : 'contract_cases';
+  await deleteDoc(doc(db, col, id));
 }
 
 // ---------- 新增/編輯表單 ----------
@@ -415,23 +502,22 @@ function openForm(id) {
   const overlay = document.getElementById('formOverlay');
   overlay.style.display = 'flex';
 
-  document.getElementById('caseTypeHint').textContent =
-    `這筆會歸類為「${TAB_CASETYPE[currentAdminTab]}」（依目前頁籤自動設定）`;
-  document.getElementById('subCategoryField').style.display = currentAdminTab === 'repair' ? '' : 'none';
+  document.getElementById('roadFields').style.display = currentAdminTab === 'road' ? '' : 'none';
+  document.getElementById('roadFields2').style.display = currentAdminTab === 'road' ? '' : 'none';
+  document.getElementById('contractFields').style.display = currentAdminTab === 'contract' ? '' : 'none';
 
-  let data = { title:'', location:'', status:'', lat:null, lng:null, photos:[], contractName:'', vendor:'', constructionReported:false, subCategory:'近期狂催且有危險案件' };
-  const list = allContractCases.filter(c => c.caseType === TAB_CASETYPE[currentAdminTab]);
+  let data = { title:'', layer:'催辦案件', suggester:'', location:'', completedDate:'', overdueDays:'', status:'', lat:null, lng:null, photos:[], contractName:'', vendor:'', caseType:'評估案件' };
+  const list = currentAdminTab === 'road' ? allCases : allContractCases;
   const lastEditedEl = document.getElementById('lastEditedInfo');
   lastEditedEl.textContent = '';
   if (id) {
     const found = list.find(c => c.id === id);
     if (found) data = found;
     document.getElementById('formTitle').textContent = '編輯案件';
-    const parts = [];
-    if (data.lastEditedIP) parts.push(`IP ${data.lastEditedIP}`);
-    if (data.lastEditedBy) parts.push(`編輯者 ${data.lastEditedBy}`);
-    if (data.updatedAt) parts.push(`於 ${data.updatedAt.toDate().toLocaleString('zh-TW', { hour12: false })}`);
-    if (parts.length > 0) lastEditedEl.textContent = '上次修改：' + parts.join('，');
+    if (data.lastEditedIP) {
+      const time = data.updatedAt ? data.updatedAt.toDate().toLocaleString('zh-TW', { hour12: false }) : '';
+      lastEditedEl.textContent = `上次修改：IP ${data.lastEditedIP}${time ? '，於 ' + time : ''}`;
+    }
   } else {
     document.getElementById('formTitle').textContent = '新增案件';
   }
@@ -439,10 +525,18 @@ function openForm(id) {
   document.getElementById('f_title').value = data.title || '';
   document.getElementById('f_location').value = data.location || '';
   document.getElementById('f_status').value = data.status || '';
-  document.getElementById('f_contractName').value = data.contractName || '';
-  document.getElementById('f_vendor').value = data.vendor || '';
-  document.getElementById('f_reported').checked = !!data.constructionReported;
-  document.getElementById('f_subCategory').value = data.subCategory || '近期狂催且有危險案件';
+
+  if (currentAdminTab === 'road') {
+    document.getElementById('f_layer').value = data.layer || '催辦案件';
+    document.getElementById('f_suggester').value = data.suggester || '';
+    document.getElementById('f_completedDate').value = data.completedDate || '';
+    document.getElementById('f_overdueDays').value = data.overdueDays || '';
+    document.getElementById('f_reported').checked = !!data.constructionReported;
+  } else {
+    document.getElementById('f_contractName').value = data.contractName || '';
+    document.getElementById('f_vendor').value = data.vendor || '';
+    document.getElementById('f_caseType').value = data.caseType || '評估案件';
+  }
 
   existingPhotos = Array.isArray(data.photos) ? [...data.photos] : [];
   renderPhotoList();
@@ -609,7 +703,7 @@ function renderPhotoList() {
   pendingPhotoFiles.forEach((file, idx) => {
     const div = document.createElement('div');
     div.className = 'photo-thumb';
-    div.style.border = '2px solid #3d6b66';
+    div.style.border = '2px solid #4285F4';
     const objUrl = URL.createObjectURL(file);
     div.innerHTML = `<img src="${objUrl}"><button class="rm" data-pending="${idx}">✕</button><div style="position:absolute;bottom:0;left:0;right:0;background:rgba(66,133,244,0.85);color:#fff;font-size:9px;text-align:center;padding:1px 0;">新</div>`;
     listEl.appendChild(div);
@@ -679,22 +773,40 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     }
 
     const finalPhotos = [...existingPhotos, ...uploadedUrls];
-    const collectionName = 'contract_cases';
-    const payload = {
-      title: document.getElementById('f_title').value.trim(),
-      contractName: document.getElementById('f_contractName').value.trim(),
-      vendor: document.getElementById('f_vendor').value.trim(),
-      caseType: TAB_CASETYPE[currentAdminTab],
-      subCategory: currentAdminTab === 'repair' ? document.getElementById('f_subCategory').value : null,
-      location: document.getElementById('f_location').value.trim(),
-      status: document.getElementById('f_status').value.trim(),
-      constructionReported: document.getElementById('f_reported').checked,
-      lat, lng,
-      photos: finalPhotos,
-      updatedAt: serverTimestamp(),
-      lastEditedIP: currentIP,
-      lastEditedBy: editorNameInput.value.trim() || '未填寫姓名'
-    };
+
+    let payload;
+    let collectionName;
+    if (currentAdminTab === 'road') {
+      collectionName = 'cases';
+      payload = {
+        title: document.getElementById('f_title').value.trim(),
+        layer: document.getElementById('f_layer').value,
+        suggester: document.getElementById('f_suggester').value.trim(),
+        location: document.getElementById('f_location').value.trim(),
+        completedDate: document.getElementById('f_completedDate').value.trim(),
+        overdueDays: document.getElementById('f_overdueDays').value.trim(),
+        status: document.getElementById('f_status').value.trim(),
+        constructionReported: document.getElementById('f_reported').checked,
+        lat, lng,
+        photos: finalPhotos,
+        updatedAt: serverTimestamp(),
+        lastEditedIP: currentIP
+      };
+    } else {
+      collectionName = 'contract_cases';
+      payload = {
+        title: document.getElementById('f_title').value.trim(),
+        contractName: document.getElementById('f_contractName').value.trim(),
+        vendor: document.getElementById('f_vendor').value.trim(),
+        caseType: document.getElementById('f_caseType').value,
+        location: document.getElementById('f_location').value.trim(),
+        status: document.getElementById('f_status').value.trim(),
+        lat, lng,
+        photos: finalPhotos,
+        updatedAt: serverTimestamp(),
+        lastEditedIP: currentIP
+      };
+    }
 
     if (!payload.title) {
       alert('請輸入標題');
@@ -706,7 +818,9 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     if (editingId) {
       await updateDoc(doc(db, collectionName, editingId), payload);
     } else {
-      payload.reportedAt = payload.constructionReported ? serverTimestamp() : null;
+      if (collectionName === 'cases') {
+        payload.reportedAt = payload.constructionReported ? serverTimestamp() : null;
+      }
       payload.createdAt = serverTimestamp();
       await addDoc(collection(db, collectionName), payload);
     }
@@ -720,6 +834,10 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   }
 });
 </script>
+
+<div style="position:fixed;bottom:4px;right:8px;z-index:9999;font-size:10px;color:rgba(0,0,0,0.35);background:rgba(255,255,255,0.6);padding:2px 8px;border-radius:6px;pointer-events:none;">
+create by Aggie Yang
+</div>
 
 </body>
 </html>

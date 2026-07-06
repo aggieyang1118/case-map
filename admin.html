@@ -95,6 +95,7 @@
 
   <div class="top-actions">
     <button class="btn btn-primary" id="addBtn">＋ 新增案件</button>
+    <input type="text" id="searchBox" placeholder="🔍 搜尋標題、位置、建議人、廠商..." style="flex:1;max-width:340px;padding:9px 14px;border:1px solid #ccc;border-radius:6px;font-size:14px;">
   </div>
 
   <table>
@@ -125,9 +126,9 @@
       <div class="field">
         <label>分類</label>
         <select id="f_layer">
-          <option value="催辦案件">催辦案件</option>
-          <option value="危險案件">危險案件</option>
           <option value="近期狂催且有危險案件">近期狂催且有危險案件</option>
+          <option value="危險案件">危險案件</option>
+          <option value="催辦案件">催辦案件</option>
           <option value="逾期案件">逾期案件</option>
         </select>
       </div>
@@ -322,9 +323,12 @@ function initAfterUnlock() {
   });
 }
 
+document.getElementById('searchBox').addEventListener('input', renderTable);
+
 document.querySelectorAll('.admin-tab').forEach(btn => {
   btn.addEventListener('click', () => {
     currentAdminTab = btn.getAttribute('data-admintab');
+    document.getElementById('searchBox').value = '';
     document.querySelectorAll('.admin-tab').forEach(b => {
       const active = b === btn;
       b.style.background = active ? '#fff' : '#fafafa';
@@ -338,14 +342,38 @@ document.querySelectorAll('.admin-tab').forEach(btn => {
   });
 });
 
+const ROAD_LAYER_ORDER = ["近期狂催且有危險案件", "危險案件", "催辦案件", "逾期案件"];
+
 function renderTable() {
   const tbody = document.getElementById('caseTableBody');
   tbody.innerHTML = '';
-  const list = currentAdminTab === 'road' ? allCases : allContractCases;
+  let list = currentAdminTab === 'road' ? [...allCases] : [...allContractCases];
+
+  // 依分類優先順序排序（僅路面案件套用固定順序）
+  if (currentAdminTab === 'road') {
+    list.sort((a, b) => {
+      const ai = ROAD_LAYER_ORDER.indexOf(a.layer);
+      const bi = ROAD_LAYER_ORDER.indexOf(b.layer);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+  }
+
+  // 搜尋過濾
+  const keyword = document.getElementById('searchBox').value.trim().toLowerCase();
+  if (keyword) {
+    list = list.filter(c => {
+      const fields = currentAdminTab === 'road'
+        ? [c.title, c.location, c.suggester, c.status]
+        : [c.title, c.location, c.vendor, c.contractName, c.caseType, c.status];
+      return fields.some(f => (f || '').toLowerCase().includes(keyword));
+    });
+  }
+
   const withGeo = list.filter(c => c.lat != null).length;
-  const label = currentAdminTab === 'road' ? '案件' : '標案案件';
-  document.getElementById('statsLine').textContent =
-    `共 ${list.length} 筆${label}，其中 ${withGeo} 筆已定位、${list.length - withGeo} 筆尚未定位`;
+  const label = currentAdminTab === 'road' ? '案件' : '評估案件';
+  document.getElementById('statsLine').textContent = keyword
+    ? `搜尋「${document.getElementById('searchBox').value.trim()}」找到 ${list.length} 筆`
+    : `共 ${list.length} 筆${label}，其中 ${withGeo} 筆已定位、${list.length - withGeo} 筆尚未定位`;
 
   list.forEach(c => {
     const tr = document.createElement('tr');

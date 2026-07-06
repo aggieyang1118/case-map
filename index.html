@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>工程案件管理地圖</title>
+<title>路面案件管理地圖</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 <style>
   * { box-sizing: border-box; }
@@ -81,7 +80,7 @@
     </div>
     <div id="mode-tabs" style="display:flex;border-bottom:1px solid #eee;">
       <button class="mode-tab active" data-mode="road" style="flex:1;padding:10px;border:none;background:#fff;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid #4285F4;">路面案件</button>
-      <button class="mode-tab" data-mode="contract" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">評比案件</button>
+      <button class="mode-tab" data-mode="contract" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">評估案件</button>
     </div>
     <div id="layer-list"></div>
     <div style="padding:10px 16px;border-top:1px solid #eee;text-align:center;">
@@ -138,6 +137,9 @@ const LAYER_LABELS = {
   "近期狂催且有危險案件": "急",
   "逾期案件": "逾"
 };
+
+// 側邊欄分類顯示順序（由上到下），要調整順序改這裡就好
+const LAYER_ORDER = ["近期狂催且有危險案件", "危險案件", "催辦案件", "逾期案件"];
 
 const CASETYPE_COLORS = {
   "評估案件": "#1a73e8",
@@ -506,7 +508,13 @@ function renderRoad(cases) {
   const groups = {};
   located.forEach(item => { (groups[item.layer] = groups[item.layer] || []).push(item); });
 
-  Object.entries(groups).forEach(([layerName, items]) => {
+  const sortedGroups = Object.entries(groups).sort((a, b) => {
+    const ai = LAYER_ORDER.indexOf(a[0]);
+    const bi = LAYER_ORDER.indexOf(b[0]);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+
+  sortedGroups.forEach(([layerName, items]) => {
     const color = LAYER_COLORS[layerName] || '#666';
     const groupEl = document.createElement('div');
     groupEl.className = 'layer-group';
@@ -574,7 +582,7 @@ function renderContract(cases) {
   const unlocated = cases.filter(c => c.lat == null || c.lng == null);
 
   document.getElementById('total-count').textContent =
-    `共 ${cases.length} 筆評比案件（${unlocated.length} 筆未定位）`;
+    `共 ${cases.length} 筆標案案件（${unlocated.length} 筆未定位）`;
 
   located.forEach(item => {
     const color = CASETYPE_COLORS[item.caseType] || '#666';
@@ -670,7 +678,7 @@ function renderCurrent() {
     document.getElementById('sidebar-header').firstChild.textContent = '路面案件管理地圖';
     renderRoad(roadCasesCache);
   } else {
-    document.getElementById('sidebar-header').firstChild.textContent = '評比案件管理地圖';
+    document.getElementById('sidebar-header').firstChild.textContent = '評估案件管理地圖';
     renderContract(contractCasesCache);
   }
 }

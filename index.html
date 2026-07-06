@@ -74,13 +74,13 @@
 <div id="app">
   <div id="sidebar">
     <div id="sidebar-header">
-      工程案件管理地圖
+      搶修案件管理地圖
       <div class="count" id="total-count"></div>
       <div class="updated" id="updated-time">即時資料，自動同步</div>
     </div>
     <div id="mode-tabs" style="display:flex;border-bottom:1px solid #eee;">
-      <button class="mode-tab active" data-mode="road" style="flex:1;padding:10px;border:none;background:#fff;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid #4285F4;">搶修案件</button>
-      <button class="mode-tab" data-mode="contract" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">評估案件</button>
+      <button class="mode-tab active" data-mode="repair" style="flex:1;padding:10px 4px;border:none;background:#fff;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid #4285F4;">搶修案件</button>
+      <button class="mode-tab" data-mode="assess" style="flex:1;padding:10px 4px;border:none;background:#fafafa;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">評估案件</button>
     </div>
     <div id="layer-list"></div>
     <div style="padding:10px 16px;border-top:1px solid #eee;text-align:center;">
@@ -133,25 +133,6 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-
-const LAYER_COLORS = {
-  "催辦案件": "#4285F4",
-  "危險案件": "#DB4436",
-  "近期狂催且有危險案件": "#FDD835",
-  "逾期案件": "#F09300"
-};
-const LAYER_LABELS = {
-  "催辦案件": "催",
-  "危險案件": "危",
-  "近期狂催且有危險案件": "超急",
-  "逾期案件": "逾"
-};
-const LAYER_TEXT_COLORS = {
-  "近期狂催且有危險案件": "#D32F2F"
-};
-
-// 側邊欄分類顯示順序（由上到下），要調整順序改這裡就好
-const LAYER_ORDER = ["近期狂催且有危險案件", "危險案件", "催辦案件", "逾期案件"];
 
 const CASETYPE_COLORS = {
   "評估案件": "#1a73e8",
@@ -330,15 +311,10 @@ function makeIcon(color, label, textColor) {
   });
 }
 
-function fieldRow(label, value, isOverdue) {
-  const cls = isOverdue ? 'overdue' : (value ? '' : 'empty');
-  return `<div class="row"><div class="label">${label}</div><div class="value ${cls}">${value || '沒有值'}</div></div>`;
-}
-
 window.reportConstruction = async function(id) {
   if (!confirm('確定要通報施工嗎？')) return;
   try {
-    await updateDoc(doc(db, 'cases', id), {
+    await updateDoc(doc(db, 'contract_cases', id), {
       constructionReported: true,
       reportedAt: serverTimestamp()
     });
@@ -350,7 +326,7 @@ window.reportConstruction = async function(id) {
 window.cancelReport = async function(id) {
   if (!confirm('確定要取消這筆通報嗎？')) return;
   try {
-    await updateDoc(doc(db, 'cases', id), {
+    await updateDoc(doc(db, 'contract_cases', id), {
       constructionReported: false,
       reportedAt: null
     });
@@ -358,56 +334,6 @@ window.cancelReport = async function(id) {
     alert('取消失敗：' + e.message);
   }
 };
-
-function popupHtml(item) {
-  const overdueDays = parseFloat(item.overdueDays) || 0;
-  let photoHtml;
-  if (item.photos && item.photos.length > 0) {
-    const pid = 'ph_' + item.id;
-    window._photoRegistry = window._photoRegistry || {};
-    window._photoRegistry[pid] = item.photos;
-    photoHtml = `
-      <div class="card-photo-wrap" id="${pid}">
-        <img src="${item.photos[0]}" data-idx="0" referrerpolicy="no-referrer" style="cursor:pointer;" onclick="openLightbox('${pid}')" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-photo-empty\\'>圖片暫時無法顯示</div>')">
-        ${item.photos.length > 1 ? `
-          <button class="photo-nav prev" onclick="event.stopPropagation();changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, -1)">‹</button>
-          <button class="photo-nav next" onclick="event.stopPropagation();changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, 1)">›</button>
-          <div class="photo-count">1 / ${item.photos.length}</div>
-        ` : ''}
-      </div>`;
-  } else {
-    photoHtml = `<div class="card-photo-empty">無照片</div>`;
-  }
-
-  const reportArea = item.constructionReported
-    ? `<div class="card-report-area"><button class="report-btn" style="background:#5f6368;" onclick="cancelReport('${item.id}')">✓ 已通報施工（點此取消）</button></div>`
-    : `<div class="card-report-area"><button class="report-btn" onclick="reportConstruction('${item.id}')">通報施工</button></div>`;
-
-  const inRoute = routeStops.some(s => s.id === item.id);
-  const navArea = `
-    <div class="nav-area" style="padding:8px 12px;border-top:1px solid #f0f0f0;">
-      <div id="navinfo_${item.id}" style="font-size:12px;color:#666;margin-bottom:8px;">距離計算中...</div>
-      <div style="display:flex;gap:6px;">
-        <button onclick="window.open('${googleMapsDirectionUrl(null, {lat:item.lat,lng:item.lng})}','_blank')" style="flex:1;padding:8px;border:none;border-radius:6px;background:#34a853;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🧭 開始導航</button>
-        <button onclick="toggleRouteStop('${item.id}')" style="flex:1;padding:8px;border:none;border-radius:6px;background:${inRoute ? '#e6f4ea' : '#f0f0f0'};color:${inRoute ? '#1e7e34' : '#555'};font-size:12px;font-weight:600;cursor:pointer;">${inRoute ? '✓ 已加入路線' : '➕ 加入路線'}</button>
-      </div>
-    </div>`;
-
-  return `
-    <div class="card-header">${item.title}</div>
-    ${photoHtml}
-    <div class="card-info">
-      ${fieldRow('位置', item.location)}
-      ${fieldRow('建議人', item.suggester)}
-      ${fieldRow('完成日期', item.completedDate)}
-      ${fieldRow('逾期天數', item.overdueDays ? Math.round(overdueDays) : '', overdueDays > 0)}
-      ${fieldRow('狀態', item.status)}
-    </div>
-    ${reportArea}
-    ${navArea}
-    <div class="card-coords">📍 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
-  `;
-}
 
 async function fillNavInfo(item) {
   const el = document.getElementById(`navinfo_${item.id}`);
@@ -508,6 +434,10 @@ function contractPopupHtml(item) {
   }
 
   const inRoute = routeStops.some(s => s.id === item.id);
+  const reportArea = item.constructionReported
+    ? `<div class="card-report-area"><button class="report-btn" style="background:#5f6368;" onclick="cancelReport('${item.id}')">✓ 已通報施工（點此取消）</button></div>`
+    : `<div class="card-report-area"><button class="report-btn" onclick="reportConstruction('${item.id}')">通報施工</button></div>`;
+
   const navArea = `
     <div class="nav-area" style="padding:8px 12px;border-top:1px solid #f0f0f0;">
       <div id="navinfo_${item.id}" style="font-size:12px;color:#666;margin-bottom:8px;">距離計算中...</div>
@@ -527,6 +457,7 @@ function contractPopupHtml(item) {
       ${contractFieldRow('位置', item.location)}
       ${contractFieldRow('狀態', item.status)}
     </div>
+    ${reportArea}
     ${navArea}
     <div class="card-coords">📍 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
   `;
@@ -534,8 +465,7 @@ function contractPopupHtml(item) {
 
 let markersByLayer = {};
 let markerById = {};
-let currentMode = 'road';
-let roadCasesCache = [];
+let currentMode = 'repair';
 let contractCasesCache = [];
 
 function clearMap() {
@@ -544,111 +474,20 @@ function clearMap() {
   markerById = {};
 }
 
-function renderRoad(cases) {
+
+const MODE_CASETYPE = { repair: '搶修案件', assess: '評估案件' };
+const MODE_LABEL = { repair: '搶修案件', assess: '評估案件' };
+
+function renderContract(allCases, mode) {
   clearMap();
   document.getElementById('layer-list').innerHTML = '';
 
+  const cases = allCases.filter(c => c.caseType === MODE_CASETYPE[mode]);
   const located = cases.filter(c => c.lat != null && c.lng != null);
   const unlocated = cases.filter(c => c.lat == null || c.lng == null);
 
   document.getElementById('total-count').textContent =
-    `共 ${cases.length} 筆案件（${unlocated.length} 筆未定位）`;
-
-  located.forEach(item => {
-    const color = LAYER_COLORS[item.layer] || '#666';
-    const label = LAYER_LABELS[item.layer] || '?';
-    const textColor = LAYER_TEXT_COLORS[item.layer];
-    const marker = L.marker([item.lat, item.lng], { icon: makeIcon(color, label, textColor) });
-    marker.bindPopup(() => popupHtml(item), { maxWidth: 310, closeButton: true, autoPan: true });
-    marker.on('mouseover', () => marker.openPopup());
-    marker.on('click', () => marker.openPopup());
-
-    if (!markersByLayer[item.layer]) markersByLayer[item.layer] = L.layerGroup();
-    marker.caseItem = item;
-    marker.addTo(markersByLayer[item.layer]);
-    markerById[item.id] = marker;
-  });
-  Object.values(markersByLayer).forEach(g => g.addTo(map));
-
-  const layerListEl = document.getElementById('layer-list');
-  const groups = {};
-  located.forEach(item => { (groups[item.layer] = groups[item.layer] || []).push(item); });
-
-  const sortedGroups = Object.entries(groups).sort((a, b) => {
-    const ai = LAYER_ORDER.indexOf(a[0]);
-    const bi = LAYER_ORDER.indexOf(b[0]);
-    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-  });
-
-  sortedGroups.forEach(([layerName, items]) => {
-    const color = LAYER_COLORS[layerName] || '#666';
-    const groupEl = document.createElement('div');
-    groupEl.className = 'layer-group';
-    const titleEl = document.createElement('div');
-    titleEl.className = 'layer-group-title';
-    titleEl.innerHTML = `
-      <input type="checkbox" checked>
-      <span class="swatch" style="background:${color}"></span>
-      <span>${layerName}</span>
-      <span class="cnt">${items.length}</span>
-    `;
-    groupEl.appendChild(titleEl);
-
-    const listWrap = document.createElement('div');
-    items.forEach(item => {
-      const overdueDays = parseFloat(item.overdueDays) || 0;
-      const el = document.createElement('div');
-      el.className = 'case-item';
-      el.innerHTML = `${item.title}${overdueDays > 0 ? `<span class="overdue-tag">逾期${Math.round(overdueDays)}天</span>` : ''}${item.constructionReported ? `<span class="reported-tag">已通報</span>` : ''}`;
-      el.addEventListener('click', () => {
-        document.querySelectorAll('.case-item.active').forEach(n => n.classList.remove('active'));
-        el.classList.add('active');
-        map.setView([item.lat, item.lng], 17, { animate: true });
-        markerById[item.id].openPopup();
-        if (window.innerWidth <= 720) document.getElementById('sidebar').classList.remove('open');
-      });
-      listWrap.appendChild(el);
-    });
-    groupEl.appendChild(listWrap);
-
-    titleEl.querySelector('input').addEventListener('change', (e) => {
-      if (e.target.checked) { map.addLayer(markersByLayer[layerName]); listWrap.style.display = ''; }
-      else { map.removeLayer(markersByLayer[layerName]); listWrap.style.display = 'none'; }
-    });
-    titleEl.addEventListener('click', (e) => {
-      if (e.target.tagName === 'INPUT') return;
-      listWrap.style.display = listWrap.style.display === 'none' ? '' : 'none';
-    });
-
-    layerListEl.appendChild(groupEl);
-  });
-
-  if (unlocated.length > 0) {
-    const sec = document.createElement('div');
-    sec.id = 'unlocated-section';
-    sec.innerHTML = `<div class="layer-group-title"><span>⚠️ 尚未定位的案件</span><span class="cnt">${unlocated.length}</span></div>`;
-    const listWrap = document.createElement('div');
-    unlocated.forEach(item => {
-      const el = document.createElement('div');
-      el.className = 'case-item';
-      el.style.cursor = 'default';
-      el.innerHTML = `${item.title || '（未命名）'}<span style="color:#aaa;font-size:11px;margin-left:4px;">未定位</span>`;
-      listWrap.appendChild(el);
-    });
-    sec.appendChild(listWrap);
-    layerListEl.appendChild(sec);
-  }
-}
-
-function renderContract(cases) {
-  clearMap();
-  document.getElementById('layer-list').innerHTML = '';
-
-  const located = cases.filter(c => c.lat != null && c.lng != null);
-  const unlocated = cases.filter(c => c.lat == null || c.lng == null);
-
-  document.getElementById('total-count').textContent =
-    `共 ${cases.length} 筆標案案件（${unlocated.length} 筆未定位）`;
+    `共 ${cases.length} 筆${MODE_LABEL[mode]}（${unlocated.length} 筆未定位）`;
 
   located.forEach(item => {
     const color = CASETYPE_COLORS[item.caseType] || '#666';
@@ -667,7 +506,7 @@ function renderContract(cases) {
   Object.values(markersByLayer).forEach(g => g.addTo(map));
 
   const layerListEl = document.getElementById('layer-list');
-  // 分組：廠商 -> 標案 -> 案件性質清單
+  // 分組：廠商 -> 標案清單
   const byVendor = {};
   located.forEach(item => {
     const vendor = item.vendor || '未指定廠商';
@@ -701,8 +540,7 @@ function renderContract(cases) {
         const el = document.createElement('div');
         el.className = 'case-item';
         el.style.paddingLeft = '40px';
-        const typeColor = CASETYPE_COLORS[item.caseType] || '#666';
-        el.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${typeColor};margin-right:5px;"></span>${item.title}<span style="color:#999;font-size:11px;margin-left:4px;">${item.caseType || ''}</span>`;
+        el.textContent = item.title;
         el.addEventListener('click', () => {
           document.querySelectorAll('.case-item.active').forEach(n => n.classList.remove('active'));
           el.classList.add('active');
@@ -740,13 +578,9 @@ function renderContract(cases) {
 }
 
 function renderCurrent() {
-  if (currentMode === 'road') {
-    document.getElementById('sidebar-header').firstChild.textContent = '搶修案件管理地圖';
-    renderRoad(roadCasesCache);
-  } else {
-    document.getElementById('sidebar-header').firstChild.textContent = '評估案件管理地圖';
-    renderContract(contractCasesCache);
-  }
+  document.getElementById('sidebar-header').firstChild.textContent =
+    currentMode === 'repair' ? '搶修案件管理地圖' : '評估案件管理地圖';
+  renderContract(contractCasesCache, currentMode);
 }
 
 document.querySelectorAll('.mode-tab').forEach(btn => {
@@ -769,16 +603,10 @@ map.on('popupopen', (e) => {
   }
 });
 
-onSnapshot(collection(db, 'cases'), (snapshot) => {
-  roadCasesCache = [];
-  snapshot.forEach(d => roadCasesCache.push({ id: d.id, ...d.data() }));
-  if (currentMode === 'road') renderCurrent();
-});
-
 onSnapshot(collection(db, 'contract_cases'), (snapshot) => {
   contractCasesCache = [];
   snapshot.forEach(d => contractCasesCache.push({ id: d.id, ...d.data() }));
-  if (currentMode === 'contract') renderCurrent();
+  if (currentMode === 'repair' || currentMode === 'assess') renderCurrent();
 });
 
 document.getElementById('sidebar-toggle').addEventListener('click', () => {
@@ -788,4 +616,3 @@ document.getElementById('sidebar-toggle').addEventListener('click', () => {
 
 </body>
 </html>
-

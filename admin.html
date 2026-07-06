@@ -471,6 +471,9 @@ function initPickMap(lat, lng) {
     if (pickMarker) { pickMap.removeLayer(pickMarker); }
     pickMarker = L.marker([lat, lng]).addTo(pickMap);
     updateCoordHint(lat, lng);
+    const msgEl = document.getElementById('geocodeMsg');
+    msgEl.style.color = '#1e7e34';
+    msgEl.textContent = '✅ 已手動設定位置';
   });
 }
 
@@ -516,13 +519,24 @@ async function geocodeAddress() {
   msgEl.textContent = '定位中...';
   try {
     let results = await tryGeocode(address);
+    let approximate = false;
 
-    // 第一次查不到，嘗試去掉「里/村」名稱再查一次（國際地圖資料庫通常沒有登記到里的細節）
+    // 第一次查不到，嘗試去掉「里/村」名稱再查一次
     if (results.length === 0) {
       const simplified = address.replace(/(區|鄉|鎮|市)[\u4e00-\u9fff]{1,4}(里|村)(?=[\u4e00-\u9fff\d])/, '$1');
       if (simplified !== address) {
         msgEl.textContent = '定位中（嘗試簡化地址）...';
         results = await tryGeocode(simplified);
+      }
+    }
+
+    // 還是查不到，嘗試去掉門牌號碼，只定位到該條路（台灣門牌常常沒有登記在國際地圖資料庫裡）
+    if (results.length === 0) {
+      const streetOnly = address.replace(/\d+(之\d+)?號.*$/, '').trim();
+      if (streetOnly && streetOnly !== address) {
+        msgEl.textContent = '定位中（找不到門牌，嘗試定位到該條路）...';
+        results = await tryGeocode(streetOnly);
+        approximate = true;
       }
     }
 
@@ -533,9 +547,11 @@ async function geocodeAddress() {
     }
     const lat = parseFloat(results[0].lat);
     const lng = parseFloat(results[0].lon);
-    moveToLocation(lat, lng, 17);
-    msgEl.style.color = '#1e7e34';
-    msgEl.textContent = '✅ 已跳到查詢位置，請確認正確、不對可直接在地圖上拖曳點選調整';
+    moveToLocation(lat, lng, approximate ? 16 : 17);
+    msgEl.style.color = approximate ? '#c07a00' : '#1e7e34';
+    msgEl.textContent = approximate
+      ? '⚠️ 查不到確切門牌，已定位到該條路附近，請在地圖上拖曳微調到正確位置'
+      : '✅ 已跳到查詢位置，請確認正確、不對可直接在地圖上拖曳點選調整';
   } catch (e) {
     msgEl.style.color = '#d9534f';
     msgEl.textContent = '定位服務暫時無法使用，請直接在地圖上點選位置';

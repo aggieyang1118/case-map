@@ -134,14 +134,27 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const CASETYPE_COLORS = {
-  "評估案件": "#1a73e8",
-  "搶修案件": "#c5221f"
+// 搶修案件的子分類（催辦/危險/近期狂催且有危險/逾期）顏色與圖釘文字
+const SUBCAT_COLORS = {
+  "催辦案件": "#4285F4",
+  "危險案件": "#DB4436",
+  "近期狂催且有危險案件": "#FDD835",
+  "逾期案件": "#F09300"
 };
-const CASETYPE_LABELS = {
-  "評估案件": "評",
-  "搶修案件": "搶"
+const SUBCAT_LABELS = {
+  "催辦案件": "催",
+  "危險案件": "危",
+  "近期狂催且有危險案件": "超急",
+  "逾期案件": "逾"
 };
+const SUBCAT_TEXT_COLORS = {
+  "近期狂催且有危險案件": "#D32F2F"
+};
+const SUBCAT_ORDER = ["近期狂催且有危險案件", "危險案件", "催辦案件", "逾期案件"];
+
+// 評估案件固定樣式（不分子分類）
+const ASSESS_COLOR = "#1e8e3e";
+const ASSESS_LABEL = "評";
 
 const map = L.map('map', { zoomControl: false }).setView([24.1435, 120.6480], 13);
 L.control.zoom({ position: 'topright' }).addTo(map);
@@ -452,14 +465,13 @@ function contractPopupHtml(item) {
     ${photoHtml}
     <div class="card-info">
       ${contractFieldRow('標案名稱', item.contractName)}
-      ${contractFieldRow('廠商', item.vendor)}
-      ${contractFieldRow('案件性質', item.caseType)}
+      ${item.subCategory ? contractFieldRow('分類', item.subCategory) : ''}
       ${contractFieldRow('位置', item.location)}
       ${contractFieldRow('狀態', item.status)}
     </div>
     ${reportArea}
     ${navArea}
-    <div class="card-coords">📍 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
+    <div class="card-coords">📍 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}${item.lastEditedBy ? ` ・ edit by ${item.lastEditedBy}` : ''}</div>
   `;
 }
 
@@ -490,9 +502,16 @@ function renderContract(allCases, mode) {
     `共 ${cases.length} 筆${MODE_LABEL[mode]}（${unlocated.length} 筆未定位）`;
 
   located.forEach(item => {
-    const color = CASETYPE_COLORS[item.caseType] || '#666';
-    const label = CASETYPE_LABELS[item.caseType] || '?';
-    const marker = L.marker([item.lat, item.lng], { icon: makeIcon(color, label) });
+    let color, label, textColor;
+    if (mode === 'repair') {
+      color = SUBCAT_COLORS[item.subCategory] || '#666';
+      label = SUBCAT_LABELS[item.subCategory] || '?';
+      textColor = SUBCAT_TEXT_COLORS[item.subCategory];
+    } else {
+      color = ASSESS_COLOR;
+      label = ASSESS_LABEL;
+    }
+    const marker = L.marker([item.lat, item.lng], { icon: makeIcon(color, label, textColor) });
     marker.bindPopup(() => contractPopupHtml(item), { maxWidth: 310, closeButton: true, autoPan: true });
     marker.on('mouseover', () => marker.openPopup());
     marker.on('click', () => marker.openPopup());
@@ -527,6 +546,13 @@ function renderContract(allCases, mode) {
 
     const vendorWrap = document.createElement('div');
     Object.entries(contracts).forEach(([contractName, items]) => {
+      if (mode === 'repair') {
+        items.sort((a, b) => {
+          const ai = SUBCAT_ORDER.indexOf(a.subCategory);
+          const bi = SUBCAT_ORDER.indexOf(b.subCategory);
+          return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+        });
+      }
       const contractTitle = document.createElement('div');
       contractTitle.style.padding = '6px 16px 6px 28px';
       contractTitle.style.fontSize = '12.5px';
@@ -540,7 +566,12 @@ function renderContract(allCases, mode) {
         const el = document.createElement('div');
         el.className = 'case-item';
         el.style.paddingLeft = '40px';
-        el.textContent = item.title;
+        if (mode === 'repair') {
+          const dotColor = SUBCAT_COLORS[item.subCategory] || '#999';
+          el.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};margin-right:6px;"></span>${item.title}`;
+        } else {
+          el.textContent = item.title;
+        }
         el.addEventListener('click', () => {
           document.querySelectorAll('.case-item.active').forEach(n => n.classList.remove('active'));
           el.classList.add('active');

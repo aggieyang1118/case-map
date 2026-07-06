@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>案件後台管理</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif; background: #f4f5f7; color: #222; }
+
+  /* 密碼畫面 */
+  #gate { position: fixed; inset: 0; background: #fff; display: flex; align-items: center; justify-content: center; z-index: 999; }
+  #gate .box { text-align: center; }
+  #gate input { font-size: 16px; padding: 10px 14px; border: 1px solid #ccc; border-radius: 6px; width: 220px; }
+  #gate button { font-size: 16px; padding: 10px 20px; border: none; background: #4285F4; color: #fff; border-radius: 6px; margin-left: 8px; cursor: pointer; }
+  #gate .err { color: #d9534f; margin-top: 10px; font-size: 13px; height: 18px; }
+
+  #app { display: none; max-width: 1100px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #888; font-size: 13px; margin-bottom: 20px; }
+
+  .top-actions { margin-bottom: 16px; display: flex; gap: 10px; }
+  .btn { padding: 9px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .btn-primary { background: #4285F4; color: #fff; }
+  .btn-secondary { background: #eee; color: #333; }
+  .btn-danger { background: #fdecea; color: #d9534f; }
+
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  th, td { text-align: left; padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+  th { background: #fafafa; color: #666; font-weight: 600; }
+  tr:hover td { background: #f7faff; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+  .badge-nogeo { background: #fff3cd; color: #92700a; }
+  .badge-ok { background: #e6f4ea; color: #1e7e34; }
+  .row-actions button { margin-right: 6px; font-size: 12px; padding: 4px 10px; }
+
+  /* 表單彈窗 */
+  #formOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: flex-start; justify-content: center; z-index: 500; overflow-y: auto; padding: 30px 12px; }
+  #formPanel { background: #fff; border-radius: 10px; width: 100%; max-width: 640px; padding: 24px; }
+  #formPanel h2 { margin-top: 0; font-size: 18px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; font-weight: 600; }
+  .field input[type=text], .field select, .field textarea { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; font-family: inherit; }
+  .field textarea { resize: vertical; }
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+
+  #pickMap { height: 260px; border-radius: 6px; margin-bottom: 6px; }
+  .coord-hint { font-size: 12px; color: #888; }
+
+  .photo-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .photo-thumb { position: relative; width: 70px; height: 70px; border-radius: 6px; overflow: hidden; background: #eee; }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-thumb .rm { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; cursor: pointer; line-height: 1; }
+
+  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+  #uploadStatus { font-size: 12px; color: #4285F4; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<!-- 密碼保護畫面 -->
+<div id="gate">
+  <div class="box">
+    <h2>請輸入後台密碼</h2>
+    <div>
+      <input type="password" id="pwInput" placeholder="密碼">
+      <button id="pwBtn">進入</button>
+    </div>
+    <div class="err" id="pwErr"></div>
+  </div>
+</div>
+
+<div id="app">
+  <h1>案件後台管理</h1>
+  <div class="sub" id="statsLine">載入中...</div>
+
+  <div class="top-actions">
+    <button class="btn btn-primary" id="addBtn">＋ 新增案件</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>標題</th>
+        <th>分類</th>
+        <th>位置</th>
+        <th>逾期天數</th>
+        <th>定位狀態</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="caseTableBody"></tbody>
+  </table>
+</div>
+
+<!-- 新增/編輯表單 -->
+<div id="formOverlay">
+  <div id="formPanel">
+    <h2 id="formTitle">新增案件</h2>
+    <div class="field">
+      <label>標題</label>
+      <input type="text" id="f_title" placeholder="例如：瀝青膠泥-黎明東街63巷7號前-2026/3/24">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>分類</label>
+        <select id="f_layer">
+          <option value="催辦案件">催辦案件</option>
+          <option value="危險案件">危險案件</option>
+          <option value="近期狂催且有危險案件">近期狂催且有危險案件</option>
+          <option value="逾期案件">逾期案件</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>建議人</label>
+        <input type="text" id="f_suggester">
+      </div>
+    </div>
+    <div class="field">
+      <label>位置（文字地址）</label>
+      <input type="text" id="f_location" placeholder="例如：台中市南屯區黎明東街63巷7號前">
+    </div>
+
+    <div class="field">
+      <label>地圖定位（在地圖上點擊設定位置）</label>
+      <div id="pickMap"></div>
+      <div class="coord-hint" id="coordHint">尚未設定座標</div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>完成日期</label>
+        <input type="text" id="f_completedDate" placeholder="例如：2026/7/1 或留空">
+      </div>
+      <div class="field">
+        <label>逾期天數</label>
+        <input type="text" id="f_overdueDays" placeholder="例如：30">
+      </div>
+    </div>
+    <div class="field">
+      <label>狀態</label>
+      <input type="text" id="f_status">
+    </div>
+
+    <div class="field">
+      <label>照片</label>
+      <div class="photo-list" id="photoList"></div>
+      <input type="file" id="f_photos" accept="image/*" multiple>
+      <div id="uploadStatus"></div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-secondary" id="cancelBtn">取消</button>
+      <button class="btn btn-primary" id="saveBtn">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
+  onSnapshot, serverTimestamp, query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getStorage, ref, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCKsEWAsOEibsBy9JTM6jDluTZPa0mR7CE",
+  authDomain: "work-map-1cec7.firebaseapp.com",
+  projectId: "work-map-1cec7",
+  storageBucket: "work-map-1cec7.firebasestorage.app",
+  messagingSenderId: "406421110375",
+  appId: "1:406421110375:web:f4c44788847f792aee5ec2"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+const ADMIN_PASSWORD = "caseadmin2026";
+
+// ---------- 密碼保護 ----------
+if (sessionStorage.getItem('admin_ok') === '1') {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+document.getElementById('pwBtn').addEventListener('click', checkPassword);
+document.getElementById('pwInput').addEventListener('keydown', e => { if (e.key === 'Enter') checkPassword(); });
+function checkPassword() {
+  const val = document.getElementById('pwInput').value;
+  if (val === ADMIN_PASSWORD) {
+    sessionStorage.setItem('admin_ok', '1');
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initAfterUnlock();
+  } else {
+    document.getElementById('pwErr').textContent = '密碼錯誤，請再試一次';
+  }
+}
+if (sessionStorage.getItem('admin_ok') === '1') {
+  initAfterUnlock();
+}
+
+// ---------- 全域狀態 ----------
+let allCases = [];
+let editingId = null;
+let pendingPhotoFiles = [];
+let existingPhotos = [];
+let pickMarker = null;
+let pickMap = null;
+
+function initAfterUnlock() {
+  const q = query(collection(db, 'cases'), orderBy('createdAt', 'desc'));
+  onSnapshot(q, (snapshot) => {
+    allCases = [];
+    snapshot.forEach(docSnap => {
+      allCases.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    renderTable();
+  });
+}
+
+function renderTable() {
+  const tbody = document.getElementById('caseTableBody');
+  tbody.innerHTML = '';
+  const withGeo = allCases.filter(c => c.lat != null).length;
+  document.getElementById('statsLine').textContent =
+    `共 ${allCases.length} 筆案件，其中 ${withGeo} 筆已定位、${allCases.length - withGeo} 筆尚未定位`;
+
+  allCases.forEach(c => {
+    const tr = document.createElement('tr');
+    const hasGeo = c.lat != null && c.lng != null;
+    tr.innerHTML = `
+      <td>${escapeHtml(c.title || '')}</td>
+      <td>${escapeHtml(c.layer || '')}</td>
+      <td>${escapeHtml(c.location || '')}</td>
+      <td>${escapeHtml(String(c.overdueDays || ''))}</td>
+      <td>${hasGeo ? '<span class="badge badge-ok">已定位</span>' : '<span class="badge badge-nogeo">未定位</span>'}</td>
+      <td class="row-actions">
+        <button class="btn btn-secondary" data-edit="${c.id}">編輯</button>
+        <button class="btn btn-danger" data-del="${c.id}">刪除</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openForm(btn.getAttribute('data-edit')));
+  });
+  tbody.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', () => deleteCase(btn.getAttribute('data-del')));
+  });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+async function deleteCase(id) {
+  if (!confirm('確定要刪除這筆案件嗎？此動作無法復原。')) return;
+  await deleteDoc(doc(db, 'cases', id));
+}
+
+// ---------- 新增/編輯表單 ----------
+document.getElementById('addBtn').addEventListener('click', () => openForm(null));
+document.getElementById('cancelBtn').addEventListener('click', closeForm);
+
+function openForm(id) {
+  editingId = id;
+  pendingPhotoFiles = [];
+  const overlay = document.getElementById('formOverlay');
+  overlay.style.display = 'flex';
+
+  let data = { title:'', layer:'催辦案件', suggester:'', location:'', completedDate:'', overdueDays:'', status:'', lat:null, lng:null, photos:[] };
+  if (id) {
+    const found = allCases.find(c => c.id === id);
+    if (found) data = found;
+    document.getElementById('formTitle').textContent = '編輯案件';
+  } else {
+    document.getElementById('formTitle').textContent = '新增案件';
+  }
+
+  document.getElementById('f_title').value = data.title || '';
+  document.getElementById('f_layer').value = data.layer || '催辦案件';
+  document.getElementById('f_suggester').value = data.suggester || '';
+  document.getElementById('f_location').value = data.location || '';
+  document.getElementById('f_completedDate').value = data.completedDate || '';
+  document.getElementById('f_overdueDays').value = data.overdueDays || '';
+  document.getElementById('f_status').value = data.status || '';
+  existingPhotos = Array.isArray(data.photos) ? [...data.photos] : [];
+  renderPhotoList();
+
+  // 初始化地圖選點
+  setTimeout(() => initPickMap(data.lat, data.lng), 50);
+}
+
+function closeForm() {
+  document.getElementById('formOverlay').style.display = 'none';
+  if (pickMap) { pickMap.remove(); pickMap = null; }
+}
+
+function initPickMap(lat, lng) {
+  if (pickMap) { pickMap.remove(); pickMap = null; }
+  const startLat = lat != null ? lat : 24.1477;
+  const startLng = lng != null ? lng : 120.6736;
+  pickMap = L.map('pickMap').setView([startLat, startLng], lat != null ? 17 : 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+  }).addTo(pickMap);
+
+  pickMarker = null;
+  if (lat != null && lng != null) {
+    pickMarker = L.marker([lat, lng]).addTo(pickMap);
+    updateCoordHint(lat, lng);
+  } else {
+    updateCoordHint(null, null);
+  }
+
+  pickMap.on('click', (e) => {
+    const { lat, lng } = e.latlng;
+    if (pickMarker) { pickMap.removeLayer(pickMarker); }
+    pickMarker = L.marker([lat, lng]).addTo(pickMap);
+    updateCoordHint(lat, lng);
+  });
+}
+
+function updateCoordHint(lat, lng) {
+  const hint = document.getElementById('coordHint');
+  if (lat == null) {
+    hint.textContent = '尚未設定座標（在地圖上點一下即可設定）';
+  } else {
+    hint.textContent = `目前座標：${lat.toFixed(6)}, ${lng.toFixed(6)}（點地圖可重新設定）`;
+  }
+}
+
+function renderPhotoList() {
+  const listEl = document.getElementById('photoList');
+  listEl.innerHTML = '';
+  existingPhotos.forEach((url, idx) => {
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    div.innerHTML = `<img src="${url}" referrerpolicy="no-referrer"><button class="rm" data-idx="${idx}">✕</button>`;
+    listEl.appendChild(div);
+  });
+  listEl.querySelectorAll('.rm').forEach(btn => {
+    btn.addEventListener('click', () => {
+      existingPhotos.splice(parseInt(btn.getAttribute('data-idx')), 1);
+      renderPhotoList();
+    });
+  });
+}
+
+document.getElementById('f_photos').addEventListener('change', (e) => {
+  pendingPhotoFiles = Array.from(e.target.files);
+  document.getElementById('uploadStatus').textContent =
+    pendingPhotoFiles.length > 0 ? `已選擇 ${pendingPhotoFiles.length} 張新照片，儲存時會自動上傳` : '';
+});
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = '儲存中...';
+
+  try {
+    let lat = null, lng = null;
+    if (pickMarker) {
+      const ll = pickMarker.getLatLng();
+      lat = ll.lat; lng = ll.lng;
+    }
+
+    // 上傳新照片
+    let uploadedUrls = [];
+    if (pendingPhotoFiles.length > 0) {
+      document.getElementById('uploadStatus').textContent = '照片上傳中...';
+      for (const file of pendingPhotoFiles) {
+        const path = `photos/${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, path);
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        uploadedUrls.push(url);
+      }
+    }
+
+    const finalPhotos = [...existingPhotos, ...uploadedUrls];
+
+    const payload = {
+      title: document.getElementById('f_title').value.trim(),
+      layer: document.getElementById('f_layer').value,
+      suggester: document.getElementById('f_suggester').value.trim(),
+      location: document.getElementById('f_location').value.trim(),
+      completedDate: document.getElementById('f_completedDate').value.trim(),
+      overdueDays: document.getElementById('f_overdueDays').value.trim(),
+      status: document.getElementById('f_status').value.trim(),
+      lat, lng,
+      photos: finalPhotos,
+      updatedAt: serverTimestamp()
+    };
+
+    if (!payload.title) {
+      alert('請輸入標題');
+      saveBtn.disabled = false;
+      saveBtn.textContent = '儲存';
+      return;
+    }
+
+    if (editingId) {
+      await updateDoc(doc(db, 'cases', editingId), payload);
+    } else {
+      payload.constructionReported = false;
+      payload.reportedAt = null;
+      payload.createdAt = serverTimestamp();
+      await addDoc(collection(db, 'cases'), payload);
+    }
+
+    closeForm();
+  } catch (e) {
+    alert('儲存失敗：' + e.message);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = '儲存';
+  }
+});
+</script>
+
+</body>
+</html>

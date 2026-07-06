@@ -3,158 +3,107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>案件後台管理</title>
+<title>路面案件管理地圖</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif; background: #f4f5f7; color: #222; }
+  html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif; }
 
-  /* 密碼畫面 */
-  #gate { position: fixed; inset: 0; background: #fff; display: flex; align-items: center; justify-content: center; z-index: 999; }
-  #gate .box { text-align: center; }
-  #gate input { font-size: 16px; padding: 10px 14px; border: 1px solid #ccc; border-radius: 6px; width: 220px; }
-  #gate button { font-size: 16px; padding: 10px 20px; border: none; background: #4285F4; color: #fff; border-radius: 6px; margin-left: 8px; cursor: pointer; }
-  #gate .err { color: #d9534f; margin-top: 10px; font-size: 13px; height: 18px; }
+  #app { display: flex; height: 100vh; }
 
-  #app { display: none; max-width: 1100px; margin: 0 auto; padding: 20px; }
-  h1 { font-size: 20px; margin-bottom: 4px; }
-  .sub { color: #888; font-size: 13px; margin-bottom: 20px; }
+  #sidebar { width: 300px; flex-shrink: 0; background: #fff; border-right: 1px solid #ddd; display: flex; flex-direction: column; overflow: hidden; }
+  #sidebar-header { padding: 14px 16px; border-bottom: 1px solid #eee; font-size: 16px; font-weight: 700; color: #1a1a1a; }
+  #sidebar-header .count { font-size: 12px; color: #888; font-weight: 400; margin-top: 2px; }
+  #sidebar-header .updated { font-size: 11px; color: #aaa; font-weight: 400; margin-top: 2px; }
 
-  .top-actions { margin-bottom: 16px; display: flex; gap: 10px; }
-  .btn { padding: 9px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
-  .btn-primary { background: #4285F4; color: #fff; }
-  .btn-secondary { background: #eee; color: #333; }
-  .btn-danger { background: #fdecea; color: #d9534f; }
+  #layer-list { overflow-y: auto; flex: 1; }
+  #unlocated-section { border-top: 2px solid #f0f0f0; }
+  #unlocated-section .layer-group-title { background: #fff8e1; }
 
-  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-  th, td { text-align: left; padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
-  th { background: #fafafa; color: #666; font-weight: 600; }
-  tr:hover td { background: #f7faff; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
-  .badge-nogeo { background: #fff3cd; color: #92700a; }
-  .badge-ok { background: #e6f4ea; color: #1e7e34; }
-  .row-actions button { margin-right: 6px; font-size: 12px; padding: 4px 10px; }
+  .layer-group { border-bottom: 1px solid #f0f0f0; }
+  .layer-group-title { display: flex; align-items: center; gap: 8px; padding: 10px 16px; cursor: pointer; font-size: 14px; font-weight: 600; color: #333; background: #fafafa; }
+  .layer-group-title:hover { background: #f0f0f0; }
+  .layer-group-title .swatch { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .layer-group-title .cnt { margin-left: auto; color: #999; font-weight: 400; font-size: 12px; }
 
-  /* 表單彈窗 */
-  #formOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: flex-start; justify-content: center; z-index: 500; overflow-y: auto; padding: 30px 12px; }
-  #formPanel { background: #fff; border-radius: 10px; width: 100%; max-width: 640px; padding: 24px; }
-  #formPanel h2 { margin-top: 0; font-size: 18px; }
-  .field { margin-bottom: 14px; }
-  .field label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; font-weight: 600; }
-  .field input[type=text], .field select, .field textarea { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; font-family: inherit; }
-  .field textarea { resize: vertical; }
-  .field-row { display: flex; gap: 12px; }
-  .field-row .field { flex: 1; }
+  .case-item { padding: 8px 16px 8px 34px; font-size: 13px; color: #444; cursor: pointer; border-bottom: 1px solid #f7f7f7; line-height: 1.4; }
+  .case-item:hover { background: #f2f6ff; }
+  .case-item.active { background: #dbe8ff; font-weight: 600; }
+  .case-item .overdue-tag { color: #d9534f; font-size: 11px; margin-left: 4px; }
+  .case-item .reported-tag { color: #1e7e34; font-size: 11px; margin-left: 4px; }
 
-  #pickMap { height: 260px; border-radius: 6px; margin-bottom: 6px; }
-  .coord-hint { font-size: 12px; color: #888; }
+  #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
 
-  .photo-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-  .photo-thumb { position: relative; width: 70px; height: 70px; border-radius: 6px; overflow: hidden; background: #eee; }
-  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-  .photo-thumb .rm { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; cursor: pointer; line-height: 1; }
+  .leaflet-popup-content-wrapper { background: #ffffff; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.28); padding: 0; }
+  .leaflet-popup-content { margin: 0; width: 290px !important; }
+  .leaflet-popup-tip { background: #ffffff; }
 
-  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .card-header { padding: 10px 34px 8px 12px; font-size: 13.5px; font-weight: 600; line-height: 1.4; color: #202020; }
 
-  #uploadStatus { font-size: 12px; color: #4285F4; margin-top: 6px; }
+  .card-photo-wrap { position: relative; width: 100%; height: 150px; background: #111; overflow: hidden; }
+  .card-photo-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card-photo-empty { width: 100%; height: 150px; background: #eee; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 12px; }
+  .photo-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.4); color: #fff; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 14px; }
+  .photo-nav.prev { left: 6px; } .photo-nav.next { right: 6px; }
+  .photo-count { position: absolute; bottom: 6px; right: 8px; background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; padding: 2px 7px; border-radius: 10px; }
+
+  .card-info { padding: 10px 12px; font-size: 12.5px; color: #333; }
+  .card-info .row { display: flex; margin-bottom: 5px; }
+  .card-info .label { width: 62px; flex-shrink: 0; color: #888; }
+  .card-info .value { flex: 1; word-break: break-all; }
+  .card-info .value.overdue { color: #d9534f; font-weight: 700; }
+  .card-info .value.empty { color: #bbb; }
+
+  .card-report-area { padding: 4px 12px 12px 12px; }
+  .report-btn { width: 100%; padding: 9px; border: none; border-radius: 6px; background: #F09300; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .report-btn:hover { background: #d97f00; }
+  .report-done { width: 100%; padding: 9px; border-radius: 6px; background: #e6f4ea; color: #1e7e34; font-size: 13px; font-weight: 600; text-align: center; }
+
+  .card-coords { font-size: 10.5px; color: #aaa; padding: 0 12px 10px 12px; }
+
+  #sidebar-toggle { display: none; position: absolute; top: 10px; left: 10px; z-index: 1000; background: #fff; border: 1px solid #ccc; border-radius: 6px; width: 38px; height: 38px; font-size: 18px; cursor: pointer; }
+  @media (max-width: 720px) {
+    #sidebar { position: absolute; z-index: 999; height: 100%; transform: translateX(-100%); transition: transform .2s; box-shadow: 4px 0 12px rgba(0,0,0,0.2); }
+    #sidebar.open { transform: translateX(0); }
+    #sidebar-toggle { display: block; }
+  }
 </style>
 </head>
 <body>
 
-<!-- 密碼保護畫面 -->
-<div id="gate">
-  <div class="box">
-    <h2>請輸入後台密碼</h2>
-    <div>
-      <input type="password" id="pwInput" placeholder="密碼">
-      <button id="pwBtn">進入</button>
-    </div>
-    <div class="err" id="pwErr"></div>
-  </div>
-</div>
-
 <div id="app">
-  <h1>案件後台管理</h1>
-  <div class="sub" id="statsLine">載入中...</div>
-
-  <div class="top-actions">
-    <button class="btn btn-primary" id="addBtn">＋ 新增案件</button>
+  <div id="sidebar">
+    <div id="sidebar-header">
+      路面案件管理地圖
+      <div class="count" id="total-count"></div>
+      <div class="updated" id="updated-time">即時資料，自動同步</div>
+    </div>
+    <div id="mode-tabs" style="display:flex;border-bottom:1px solid #eee;">
+      <button class="mode-tab active" data-mode="road" style="flex:1;padding:10px;border:none;background:#fff;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid #4285F4;">路面案件</button>
+      <button class="mode-tab" data-mode="contract" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">標案案件</button>
+    </div>
+    <div id="layer-list"></div>
+    <div style="padding:10px 16px;border-top:1px solid #eee;text-align:center;">
+      <a href="admin.html" style="font-size:12px;color:#999;text-decoration:none;">⚙ 後台管理</a>
+    </div>
   </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>標題</th>
-        <th>分類</th>
-        <th>位置</th>
-        <th>逾期天數</th>
-        <th>定位狀態</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody id="caseTableBody"></tbody>
-  </table>
-</div>
-
-<!-- 新增/編輯表單 -->
-<div id="formOverlay">
-  <div id="formPanel">
-    <h2 id="formTitle">新增案件</h2>
-    <div class="field">
-      <label>標題</label>
-      <input type="text" id="f_title" placeholder="例如：瀝青膠泥-黎明東街63巷7號前-2026/3/24">
+  <div style="position:relative; flex:1;">
+    <button id="sidebar-toggle">☰</button>
+    <div id="map"></div>
+    <div id="routeFab" style="position:absolute;bottom:20px;right:20px;z-index:1000;background:#4285F4;color:#fff;padding:10px 16px;border-radius:24px;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;font-size:13px;font-weight:600;display:none;">
+      🗺️ 路線規劃（<span id="routeCount">0</span>）
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label>分類</label>
-        <select id="f_layer">
-          <option value="催辦案件">催辦案件</option>
-          <option value="危險案件">危險案件</option>
-          <option value="近期狂催且有危險案件">近期狂催且有危險案件</option>
-          <option value="逾期案件">逾期案件</option>
-        </select>
+    <div id="routePanel" style="position:absolute;bottom:20px;right:20px;z-index:1001;background:#fff;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);width:320px;max-height:70vh;overflow-y:auto;display:none;">
+      <div style="padding:12px 14px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+        <strong style="font-size:14px;">路線規劃</strong>
+        <button id="closeRoutePanel" style="border:none;background:none;font-size:16px;cursor:pointer;color:#999;">✕</button>
       </div>
-      <div class="field">
-        <label>建議人</label>
-        <input type="text" id="f_suggester">
+      <div id="routeStops" style="padding:10px 14px;"></div>
+      <div id="routeSummary" style="padding:0 14px 10px 14px;font-size:12px;color:#666;"></div>
+      <div style="padding:10px 14px;border-top:1px solid #eee;">
+        <button id="openGoogleRoute" style="width:100%;padding:10px;border:none;border-radius:6px;background:#4285F4;color:#fff;font-weight:600;cursor:pointer;font-size:13px;">在 Google 地圖開啟整段路線</button>
+        <button id="clearRoute" style="width:100%;padding:8px;border:none;border-radius:6px;background:#f5f5f5;color:#999;margin-top:6px;cursor:pointer;font-size:12px;">清空路線</button>
       </div>
-    </div>
-    <div class="field">
-      <label>位置（文字地址）</label>
-      <input type="text" id="f_location" placeholder="例如：台中市南屯區黎明東街63巷7號前">
-    </div>
-
-    <div class="field">
-      <label>地圖定位（在地圖上點擊設定位置）</label>
-      <div id="pickMap"></div>
-      <div class="coord-hint" id="coordHint">尚未設定座標</div>
-    </div>
-
-    <div class="field-row">
-      <div class="field">
-        <label>完成日期</label>
-        <input type="text" id="f_completedDate" placeholder="例如：2026/7/1 或留空">
-      </div>
-      <div class="field">
-        <label>逾期天數</label>
-        <input type="text" id="f_overdueDays" placeholder="例如：30">
-      </div>
-    </div>
-    <div class="field">
-      <label>狀態</label>
-      <input type="text" id="f_status">
-    </div>
-
-    <div class="field">
-      <label>照片</label>
-      <div class="photo-list" id="photoList"></div>
-      <input type="file" id="f_photos" accept="image/*" multiple>
-      <div id="uploadStatus"></div>
-    </div>
-
-    <div class="form-actions">
-      <button class="btn btn-secondary" id="cancelBtn">取消</button>
-      <button class="btn btn-primary" id="saveBtn">儲存</button>
     </div>
   </div>
 </div>
@@ -162,13 +111,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, serverTimestamp, query, orderBy
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import {
-  getStorage, ref, uploadBytes, getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCKsEWAsOEibsBy9JTM6jDluTZPa0mR7CE",
@@ -178,253 +121,565 @@ const firebaseConfig = {
   messagingSenderId: "406421110375",
   appId: "1:406421110375:web:f4c44788847f792aee5ec2"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
-const ADMIN_PASSWORD = "caseadmin2026";
+const LAYER_COLORS = {
+  "催辦案件": "#4285F4",
+  "危險案件": "#DB4436",
+  "近期狂催且有危險案件": "#9C27B0",
+  "逾期案件": "#F09300"
+};
+const LAYER_LABELS = {
+  "催辦案件": "催",
+  "危險案件": "危",
+  "近期狂催且有危險案件": "急",
+  "逾期案件": "逾"
+};
 
-// ---------- 密碼保護 ----------
-if (sessionStorage.getItem('admin_ok') === '1') {
-  document.getElementById('gate').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
+const CASETYPE_COLORS = {
+  "評估案件": "#1a73e8",
+  "搶修案件": "#c5221f"
+};
+const CASETYPE_LABELS = {
+  "評估案件": "評",
+  "搶修案件": "搶"
+};
+
+const map = L.map('map', { zoomControl: false }).setView([24.1435, 120.6480], 13);
+L.control.zoom({ position: 'topright' }).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+}).addTo(map);
+
+// ---------- 使用者目前位置 ----------
+let userLocation = null;
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
+    (err) => { console.warn('無法取得目前位置：', err.message); },
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
 }
-document.getElementById('pwBtn').addEventListener('click', checkPassword);
-document.getElementById('pwInput').addEventListener('keydown', e => { if (e.key === 'Enter') checkPassword(); });
-function checkPassword() {
-  const val = document.getElementById('pwInput').value;
-  if (val === ADMIN_PASSWORD) {
-    sessionStorage.setItem('admin_ok', '1');
-    document.getElementById('gate').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    initAfterUnlock();
+
+// ---------- 路線計算（OSRM，免費、不需金鑰） ----------
+async function osrmRoute(coordsLatLng) {
+  // coordsLatLng: [{lat,lng}, ...]（至少 2 點）
+  const coordStr = coordsLatLng.map(c => `${c.lng},${c.lat}`).join(';');
+  const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=false`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.code !== 'Ok') throw new Error('路線計算失敗');
+  return data.routes[0]; // { distance(m), duration(s), legs: [...] }
+}
+
+function formatDistance(meters) {
+  return meters >= 1000 ? `${(meters / 1000).toFixed(1)} 公里` : `${Math.round(meters)} 公尺`;
+}
+function formatDuration(seconds) {
+  const min = Math.round(seconds / 60);
+  return min >= 60 ? `${Math.floor(min / 60)} 小時 ${min % 60} 分鐘` : `${min} 分鐘`;
+}
+
+function googleMapsDirectionUrl(origin, destination, waypoints) {
+  const base = 'https://www.google.com/maps/dir/?api=1';
+  const originStr = origin ? `&origin=${origin.lat},${origin.lng}` : '';
+  const destStr = `&destination=${destination.lat},${destination.lng}`;
+  const wpStr = waypoints && waypoints.length > 0
+    ? `&waypoints=${waypoints.map(w => `${w.lat},${w.lng}`).join('|')}`
+    : '';
+  return `${base}${originStr}${destStr}${wpStr}&travelmode=driving`;
+}
+
+// ---------- 路線規劃清單 ----------
+let routeStops = []; // [{id, title, lat, lng}]
+
+function toggleRouteStop(id) {
+  const idx = routeStops.findIndex(s => s.id === id);
+  if (idx >= 0) {
+    routeStops.splice(idx, 1);
   } else {
-    document.getElementById('pwErr').textContent = '密碼錯誤，請再試一次';
+    const marker = markerById[id];
+    const item = marker ? marker.caseItem : null;
+    if (!item) return;
+    routeStops.push({ id, title: item.title, lat: item.lat, lng: item.lng });
   }
+  updateRouteFab();
+  renderRoutePanel();
+  if (markerById[id]) markerById[id].openPopup();
 }
-if (sessionStorage.getItem('admin_ok') === '1') {
-  initAfterUnlock();
-}
+window.toggleRouteStop = toggleRouteStop;
 
-// ---------- 全域狀態 ----------
-let allCases = [];
-let editingId = null;
-let pendingPhotoFiles = [];
-let existingPhotos = [];
-let pickMarker = null;
-let pickMap = null;
-
-function initAfterUnlock() {
-  const q = query(collection(db, 'cases'), orderBy('createdAt', 'desc'));
-  onSnapshot(q, (snapshot) => {
-    allCases = [];
-    snapshot.forEach(docSnap => {
-      allCases.push({ id: docSnap.id, ...docSnap.data() });
-    });
-    renderTable();
-  });
+function updateRouteFab() {
+  const fab = document.getElementById('routeFab');
+  document.getElementById('routeCount').textContent = routeStops.length;
+  fab.style.display = routeStops.length > 0 ? 'block' : 'none';
 }
 
-function renderTable() {
-  const tbody = document.getElementById('caseTableBody');
-  tbody.innerHTML = '';
-  const withGeo = allCases.filter(c => c.lat != null).length;
-  document.getElementById('statsLine').textContent =
-    `共 ${allCases.length} 筆案件，其中 ${withGeo} 筆已定位、${allCases.length - withGeo} 筆尚未定位`;
-
-  allCases.forEach(c => {
-    const tr = document.createElement('tr');
-    const hasGeo = c.lat != null && c.lng != null;
-    tr.innerHTML = `
-      <td>${escapeHtml(c.title || '')}</td>
-      <td>${escapeHtml(c.layer || '')}</td>
-      <td>${escapeHtml(c.location || '')}</td>
-      <td>${escapeHtml(String(c.overdueDays || ''))}</td>
-      <td>${hasGeo ? '<span class="badge badge-ok">已定位</span>' : '<span class="badge badge-nogeo">未定位</span>'}</td>
-      <td class="row-actions">
-        <button class="btn btn-secondary" data-edit="${c.id}">編輯</button>
-        <button class="btn btn-danger" data-del="${c.id}">刪除</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  tbody.querySelectorAll('[data-edit]').forEach(btn => {
-    btn.addEventListener('click', () => openForm(btn.getAttribute('data-edit')));
-  });
-  tbody.querySelectorAll('[data-del]').forEach(btn => {
-    btn.addEventListener('click', () => deleteCase(btn.getAttribute('data-del')));
-  });
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-
-async function deleteCase(id) {
-  if (!confirm('確定要刪除這筆案件嗎？此動作無法復原。')) return;
-  await deleteDoc(doc(db, 'cases', id));
-}
-
-// ---------- 新增/編輯表單 ----------
-document.getElementById('addBtn').addEventListener('click', () => openForm(null));
-document.getElementById('cancelBtn').addEventListener('click', closeForm);
-
-function openForm(id) {
-  editingId = id;
-  pendingPhotoFiles = [];
-  const overlay = document.getElementById('formOverlay');
-  overlay.style.display = 'flex';
-
-  let data = { title:'', layer:'催辦案件', suggester:'', location:'', completedDate:'', overdueDays:'', status:'', lat:null, lng:null, photos:[] };
-  if (id) {
-    const found = allCases.find(c => c.id === id);
-    if (found) data = found;
-    document.getElementById('formTitle').textContent = '編輯案件';
-  } else {
-    document.getElementById('formTitle').textContent = '新增案件';
-  }
-
-  document.getElementById('f_title').value = data.title || '';
-  document.getElementById('f_layer').value = data.layer || '催辦案件';
-  document.getElementById('f_suggester').value = data.suggester || '';
-  document.getElementById('f_location').value = data.location || '';
-  document.getElementById('f_completedDate').value = data.completedDate || '';
-  document.getElementById('f_overdueDays').value = data.overdueDays || '';
-  document.getElementById('f_status').value = data.status || '';
-  existingPhotos = Array.isArray(data.photos) ? [...data.photos] : [];
-  renderPhotoList();
-
-  // 初始化地圖選點
-  setTimeout(() => initPickMap(data.lat, data.lng), 50);
-}
-
-function closeForm() {
-  document.getElementById('formOverlay').style.display = 'none';
-  if (pickMap) { pickMap.remove(); pickMap = null; }
-}
-
-function initPickMap(lat, lng) {
-  if (pickMap) { pickMap.remove(); pickMap = null; }
-  const startLat = lat != null ? lat : 24.1477;
-  const startLng = lng != null ? lng : 120.6736;
-  pickMap = L.map('pickMap').setView([startLat, startLng], lat != null ? 17 : 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
-  }).addTo(pickMap);
-
-  pickMarker = null;
-  if (lat != null && lng != null) {
-    pickMarker = L.marker([lat, lng]).addTo(pickMap);
-    updateCoordHint(lat, lng);
-  } else {
-    updateCoordHint(null, null);
-  }
-
-  pickMap.on('click', (e) => {
-    const { lat, lng } = e.latlng;
-    if (pickMarker) { pickMap.removeLayer(pickMarker); }
-    pickMarker = L.marker([lat, lng]).addTo(pickMap);
-    updateCoordHint(lat, lng);
-  });
-}
-
-function updateCoordHint(lat, lng) {
-  const hint = document.getElementById('coordHint');
-  if (lat == null) {
-    hint.textContent = '尚未設定座標（在地圖上點一下即可設定）';
-  } else {
-    hint.textContent = `目前座標：${lat.toFixed(6)}, ${lng.toFixed(6)}（點地圖可重新設定）`;
-  }
-}
-
-function renderPhotoList() {
-  const listEl = document.getElementById('photoList');
-  listEl.innerHTML = '';
-  existingPhotos.forEach((url, idx) => {
-    const div = document.createElement('div');
-    div.className = 'photo-thumb';
-    div.innerHTML = `<img src="${url}" referrerpolicy="no-referrer"><button class="rm" data-idx="${idx}">✕</button>`;
-    listEl.appendChild(div);
-  });
-  listEl.querySelectorAll('.rm').forEach(btn => {
-    btn.addEventListener('click', () => {
-      existingPhotos.splice(parseInt(btn.getAttribute('data-idx')), 1);
-      renderPhotoList();
-    });
-  });
-}
-
-document.getElementById('f_photos').addEventListener('change', (e) => {
-  pendingPhotoFiles = Array.from(e.target.files);
-  document.getElementById('uploadStatus').textContent =
-    pendingPhotoFiles.length > 0 ? `已選擇 ${pendingPhotoFiles.length} 張新照片，儲存時會自動上傳` : '';
+document.getElementById('routeFab').addEventListener('click', () => {
+  document.getElementById('routePanel').style.display = 'block';
+  document.getElementById('routeFab').style.display = 'none';
+  renderRoutePanel();
+});
+document.getElementById('closeRoutePanel').addEventListener('click', () => {
+  document.getElementById('routePanel').style.display = 'none';
+  updateRouteFab();
+});
+document.getElementById('clearRoute').addEventListener('click', () => {
+  routeStops = [];
+  document.getElementById('routePanel').style.display = 'none';
+  updateRouteFab();
+});
+document.getElementById('openGoogleRoute').addEventListener('click', () => {
+  if (routeStops.length === 0) return;
+  const origin = userLocation || routeStops[0];
+  const stopsForNav = userLocation ? routeStops : routeStops.slice(1);
+  const destination = stopsForNav[stopsForNav.length - 1] || routeStops[0];
+  const waypoints = stopsForNav.slice(0, -1);
+  window.open(googleMapsDirectionUrl(origin, destination, waypoints), '_blank');
 });
 
-document.getElementById('saveBtn').addEventListener('click', async () => {
-  const saveBtn = document.getElementById('saveBtn');
-  saveBtn.disabled = true;
-  saveBtn.textContent = '儲存中...';
+async function renderRoutePanel() {
+  const stopsEl = document.getElementById('routeStops');
+  const summaryEl = document.getElementById('routeSummary');
+  stopsEl.innerHTML = '';
 
+  if (routeStops.length === 0) {
+    stopsEl.innerHTML = '<div style="color:#999;font-size:13px;">尚未選擇任何站點，點案件卡片裡的「加入路線」按鈕開始規劃。</div>';
+    summaryEl.textContent = '';
+    return;
+  }
+
+  const points = userLocation ? [userLocation, ...routeStops] : routeStops;
+  points.forEach((p, idx) => {
+    const div = document.createElement('div');
+    div.style.padding = '6px 0';
+    div.style.borderBottom = idx < points.length - 1 ? '1px dashed #eee' : 'none';
+    div.style.fontSize = '13px';
+    const label = idx === 0 && userLocation ? '📍 你目前的位置' : (p.title || `站點 ${idx}`);
+    div.innerHTML = `<strong>${idx + 1}.</strong> ${label}` +
+      (p.id ? ` <button data-rm="${p.id}" style="float:right;border:none;background:none;color:#d9534f;cursor:pointer;font-size:12px;">移除</button>` : '');
+    stopsEl.appendChild(div);
+  });
+  stopsEl.querySelectorAll('[data-rm]').forEach(btn => {
+    btn.addEventListener('click', () => toggleRouteStop(btn.getAttribute('data-rm')));
+  });
+
+  summaryEl.textContent = '路線計算中...';
   try {
-    let lat = null, lng = null;
-    if (pickMarker) {
-      const ll = pickMarker.getLatLng();
-      lat = ll.lat; lng = ll.lng;
-    }
-
-    // 上傳新照片
-    let uploadedUrls = [];
-    if (pendingPhotoFiles.length > 0) {
-      document.getElementById('uploadStatus').textContent = '照片上傳中...';
-      for (const file of pendingPhotoFiles) {
-        const path = `photos/${Date.now()}_${file.name}`;
-        const storageRef = ref(storage, path);
-        await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(storageRef);
-        uploadedUrls.push(url);
-      }
-    }
-
-    const finalPhotos = [...existingPhotos, ...uploadedUrls];
-
-    const payload = {
-      title: document.getElementById('f_title').value.trim(),
-      layer: document.getElementById('f_layer').value,
-      suggester: document.getElementById('f_suggester').value.trim(),
-      location: document.getElementById('f_location').value.trim(),
-      completedDate: document.getElementById('f_completedDate').value.trim(),
-      overdueDays: document.getElementById('f_overdueDays').value.trim(),
-      status: document.getElementById('f_status').value.trim(),
-      lat, lng,
-      photos: finalPhotos,
-      updatedAt: serverTimestamp()
-    };
-
-    if (!payload.title) {
-      alert('請輸入標題');
-      saveBtn.disabled = false;
-      saveBtn.textContent = '儲存';
+    if (points.length < 2) {
+      summaryEl.textContent = '至少需要 2 個點才能計算路線（目前位置無法取得時，需再加入至少 2 個站點）。';
       return;
     }
-
-    if (editingId) {
-      await updateDoc(doc(db, 'cases', editingId), payload);
-    } else {
-      payload.constructionReported = false;
-      payload.reportedAt = null;
-      payload.createdAt = serverTimestamp();
-      await addDoc(collection(db, 'cases'), payload);
-    }
-
-    closeForm();
+    const route = await osrmRoute(points);
+    summaryEl.innerHTML = `總距離約 <strong>${formatDistance(route.distance)}</strong>，預估車程 <strong>${formatDuration(route.duration)}</strong>`;
   } catch (e) {
-    alert('儲存失敗：' + e.message);
-  } finally {
-    saveBtn.disabled = false;
-    saveBtn.textContent = '儲存';
+    summaryEl.textContent = '路線計算暫時失敗，可直接按下方按鈕用 Google 地圖規劃。';
   }
+}
+
+function makeIcon(color, label) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:26px;height:26px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;">${label}</div>`,
+    iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -13]
+  });
+}
+
+function fieldRow(label, value, isOverdue) {
+  const cls = isOverdue ? 'overdue' : (value ? '' : 'empty');
+  return `<div class="row"><div class="label">${label}</div><div class="value ${cls}">${value || '沒有值'}</div></div>`;
+}
+
+window.reportConstruction = async function(id) {
+  if (!confirm('確定要通報施工嗎？')) return;
+  try {
+    await updateDoc(doc(db, 'cases', id), {
+      constructionReported: true,
+      reportedAt: serverTimestamp()
+    });
+  } catch (e) {
+    alert('通報失敗：' + e.message);
+  }
+};
+
+window.cancelReport = async function(id) {
+  if (!confirm('確定要取消這筆通報嗎？')) return;
+  try {
+    await updateDoc(doc(db, 'cases', id), {
+      constructionReported: false,
+      reportedAt: null
+    });
+  } catch (e) {
+    alert('取消失敗：' + e.message);
+  }
+};
+
+function popupHtml(item) {
+  const overdueDays = parseFloat(item.overdueDays) || 0;
+  let photoHtml;
+  if (item.photos && item.photos.length > 0) {
+    const pid = 'ph_' + item.id;
+    photoHtml = `
+      <div class="card-photo-wrap" id="${pid}">
+        <img src="${item.photos[0]}" data-idx="0" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-photo-empty\\'>圖片暫時無法顯示</div>')">
+        ${item.photos.length > 1 ? `
+          <button class="photo-nav prev" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, -1)">‹</button>
+          <button class="photo-nav next" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, 1)">›</button>
+          <div class="photo-count">1 / ${item.photos.length}</div>
+        ` : ''}
+      </div>`;
+  } else {
+    photoHtml = `<div class="card-photo-empty">無照片</div>`;
+  }
+
+  const reportArea = item.constructionReported
+    ? `<div class="card-report-area"><div class="report-done">✅ 已通報施工</div><div style="text-align:center;margin-top:6px;"><a href="#" style="font-size:11px;color:#999;" onclick="cancelReport('${item.id}');return false;">不小心點到？取消通報</a></div></div>`
+    : `<div class="card-report-area"><button class="report-btn" onclick="reportConstruction('${item.id}')">通報施工</button></div>`;
+
+  const inRoute = routeStops.some(s => s.id === item.id);
+  const navArea = `
+    <div class="nav-area" style="padding:8px 12px;border-top:1px solid #f0f0f0;">
+      <div id="navinfo_${item.id}" style="font-size:12px;color:#666;margin-bottom:8px;">距離計算中...</div>
+      <div style="display:flex;gap:6px;">
+        <button onclick="window.open('${googleMapsDirectionUrl(null, {lat:item.lat,lng:item.lng})}','_blank')" style="flex:1;padding:8px;border:none;border-radius:6px;background:#34a853;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🧭 開始導航</button>
+        <button onclick="toggleRouteStop('${item.id}')" style="flex:1;padding:8px;border:none;border-radius:6px;background:${inRoute ? '#e6f4ea' : '#f0f0f0'};color:${inRoute ? '#1e7e34' : '#555'};font-size:12px;font-weight:600;cursor:pointer;">${inRoute ? '✓ 已加入路線' : '➕ 加入路線'}</button>
+      </div>
+    </div>`;
+
+  return `
+    <div class="card-header">${item.title}</div>
+    ${photoHtml}
+    <div class="card-info">
+      ${fieldRow('位置', item.location)}
+      ${fieldRow('建議人', item.suggester)}
+      ${fieldRow('完成日期', item.completedDate)}
+      ${fieldRow('逾期天數', item.overdueDays ? Math.round(overdueDays) : '', overdueDays > 0)}
+      ${fieldRow('狀態', item.status)}
+    </div>
+    ${reportArea}
+    ${navArea}
+    <div class="card-coords">📍 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
+  `;
+}
+
+async function fillNavInfo(item) {
+  const el = document.getElementById(`navinfo_${item.id}`);
+  if (!el) return;
+  if (!userLocation) {
+    el.textContent = '（無法取得你目前位置，僅能使用導航按鈕）';
+    return;
+  }
+  try {
+    const route = await osrmRoute([userLocation, { lat: item.lat, lng: item.lng }]);
+    el.innerHTML = `距離你目前位置約 <strong>${formatDistance(route.distance)}</strong>，車程約 <strong>${formatDuration(route.duration)}</strong>`;
+  } catch (e) {
+    el.textContent = '距離計算暫時失敗（可直接按導航按鈕）';
+  }
+}
+
+window.changePhoto = function(wrapId, photos, dir) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  const img = wrap.querySelector('img');
+  let idx = parseInt(img.getAttribute('data-idx')) || 0;
+  idx = (idx + dir + photos.length) % photos.length;
+  img.setAttribute('data-idx', idx);
+  img.src = photos[idx];
+  const countEl = wrap.querySelector('.photo-count');
+  if (countEl) countEl.textContent = `${idx + 1} / ${photos.length}`;
+};
+
+function contractFieldRow(label, value) {
+  return `<div class="row"><div class="label">${label}</div><div class="value ${value ? '' : 'empty'}">${value || '沒有值'}</div></div>`;
+}
+
+function contractPopupHtml(item) {
+  let photoHtml;
+  if (item.photos && item.photos.length > 0) {
+    const pid = 'cph_' + item.id;
+    photoHtml = `
+      <div class="card-photo-wrap" id="${pid}">
+        <img src="${item.photos[0]}" data-idx="0" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-photo-empty\\'>圖片暫時無法顯示</div>')">
+        ${item.photos.length > 1 ? `
+          <button class="photo-nav prev" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, -1)">‹</button>
+          <button class="photo-nav next" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, 1)">›</button>
+          <div class="photo-count">1 / ${item.photos.length}</div>
+        ` : ''}
+      </div>`;
+  } else {
+    photoHtml = `<div class="card-photo-empty">無照片</div>`;
+  }
+
+  const inRoute = routeStops.some(s => s.id === item.id);
+  const navArea = `
+    <div class="nav-area" style="padding:8px 12px;border-top:1px solid #f0f0f0;">
+      <div id="navinfo_${item.id}" style="font-size:12px;color:#666;margin-bottom:8px;">距離計算中...</div>
+      <div style="display:flex;gap:6px;">
+        <button onclick="window.open('${googleMapsDirectionUrl(null, {lat:item.lat,lng:item.lng})}','_blank')" style="flex:1;padding:8px;border:none;border-radius:6px;background:#34a853;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🧭 開始導航</button>
+        <button onclick="toggleRouteStop('${item.id}')" style="flex:1;padding:8px;border:none;border-radius:6px;background:${inRoute ? '#e6f4ea' : '#f0f0f0'};color:${inRoute ? '#1e7e34' : '#555'};font-size:12px;font-weight:600;cursor:pointer;">${inRoute ? '✓ 已加入路線' : '➕ 加入路線'}</button>
+      </div>
+    </div>`;
+
+  return `
+    <div class="card-header">${item.title}</div>
+    ${photoHtml}
+    <div class="card-info">
+      ${contractFieldRow('標案名稱', item.contractName)}
+      ${contractFieldRow('廠商', item.vendor)}
+      ${contractFieldRow('案件性質', item.caseType)}
+      ${contractFieldRow('位置', item.location)}
+      ${contractFieldRow('狀態', item.status)}
+    </div>
+    ${navArea}
+    <div class="card-coords">📍 ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
+  `;
+}
+
+let markersByLayer = {};
+let markerById = {};
+let currentMode = 'road';
+let roadCasesCache = [];
+let contractCasesCache = [];
+
+function clearMap() {
+  Object.values(markersByLayer).forEach(g => map.removeLayer(g));
+  markersByLayer = {};
+  markerById = {};
+}
+
+function renderRoad(cases) {
+  clearMap();
+  document.getElementById('layer-list').innerHTML = '';
+
+  const located = cases.filter(c => c.lat != null && c.lng != null);
+  const unlocated = cases.filter(c => c.lat == null || c.lng == null);
+
+  document.getElementById('total-count').textContent =
+    `共 ${cases.length} 筆案件（${unlocated.length} 筆未定位）`;
+
+  located.forEach(item => {
+    const color = LAYER_COLORS[item.layer] || '#666';
+    const label = LAYER_LABELS[item.layer] || '?';
+    const marker = L.marker([item.lat, item.lng], { icon: makeIcon(color, label) });
+    marker.bindPopup(() => popupHtml(item), { maxWidth: 310, closeButton: true, autoPan: true });
+    marker.on('mouseover', () => marker.openPopup());
+    marker.on('click', () => marker.openPopup());
+
+    if (!markersByLayer[item.layer]) markersByLayer[item.layer] = L.layerGroup();
+    marker.caseItem = item;
+    marker.addTo(markersByLayer[item.layer]);
+    markerById[item.id] = marker;
+  });
+  Object.values(markersByLayer).forEach(g => g.addTo(map));
+
+  const layerListEl = document.getElementById('layer-list');
+  const groups = {};
+  located.forEach(item => { (groups[item.layer] = groups[item.layer] || []).push(item); });
+
+  Object.entries(groups).forEach(([layerName, items]) => {
+    const color = LAYER_COLORS[layerName] || '#666';
+    const groupEl = document.createElement('div');
+    groupEl.className = 'layer-group';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'layer-group-title';
+    titleEl.innerHTML = `
+      <input type="checkbox" checked>
+      <span class="swatch" style="background:${color}"></span>
+      <span>${layerName}</span>
+      <span class="cnt">${items.length}</span>
+    `;
+    groupEl.appendChild(titleEl);
+
+    const listWrap = document.createElement('div');
+    items.forEach(item => {
+      const overdueDays = parseFloat(item.overdueDays) || 0;
+      const el = document.createElement('div');
+      el.className = 'case-item';
+      el.innerHTML = `${item.title}${overdueDays > 0 ? `<span class="overdue-tag">逾期${Math.round(overdueDays)}天</span>` : ''}${item.constructionReported ? `<span class="reported-tag">已通報</span>` : ''}`;
+      el.addEventListener('click', () => {
+        document.querySelectorAll('.case-item.active').forEach(n => n.classList.remove('active'));
+        el.classList.add('active');
+        map.setView([item.lat, item.lng], 17, { animate: true });
+        markerById[item.id].openPopup();
+        if (window.innerWidth <= 720) document.getElementById('sidebar').classList.remove('open');
+      });
+      listWrap.appendChild(el);
+    });
+    groupEl.appendChild(listWrap);
+
+    titleEl.querySelector('input').addEventListener('change', (e) => {
+      if (e.target.checked) { map.addLayer(markersByLayer[layerName]); listWrap.style.display = ''; }
+      else { map.removeLayer(markersByLayer[layerName]); listWrap.style.display = 'none'; }
+    });
+    titleEl.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      listWrap.style.display = listWrap.style.display === 'none' ? '' : 'none';
+    });
+
+    layerListEl.appendChild(groupEl);
+  });
+
+  if (unlocated.length > 0) {
+    const sec = document.createElement('div');
+    sec.id = 'unlocated-section';
+    sec.innerHTML = `<div class="layer-group-title"><span>⚠️ 尚未定位的案件</span><span class="cnt">${unlocated.length}</span></div>`;
+    const listWrap = document.createElement('div');
+    unlocated.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'case-item';
+      el.style.cursor = 'default';
+      el.innerHTML = `${item.title || '（未命名）'}<span style="color:#aaa;font-size:11px;margin-left:4px;">未定位</span>`;
+      listWrap.appendChild(el);
+    });
+    sec.appendChild(listWrap);
+    layerListEl.appendChild(sec);
+  }
+}
+
+function renderContract(cases) {
+  clearMap();
+  document.getElementById('layer-list').innerHTML = '';
+
+  const located = cases.filter(c => c.lat != null && c.lng != null);
+  const unlocated = cases.filter(c => c.lat == null || c.lng == null);
+
+  document.getElementById('total-count').textContent =
+    `共 ${cases.length} 筆標案案件（${unlocated.length} 筆未定位）`;
+
+  located.forEach(item => {
+    const color = CASETYPE_COLORS[item.caseType] || '#666';
+    const label = CASETYPE_LABELS[item.caseType] || '?';
+    const marker = L.marker([item.lat, item.lng], { icon: makeIcon(color, label) });
+    marker.bindPopup(() => contractPopupHtml(item), { maxWidth: 310, closeButton: true, autoPan: true });
+    marker.on('mouseover', () => marker.openPopup());
+    marker.on('click', () => marker.openPopup());
+
+    const groupKey = item.vendor || '未指定廠商';
+    if (!markersByLayer[groupKey]) markersByLayer[groupKey] = L.layerGroup();
+    marker.caseItem = item;
+    marker.addTo(markersByLayer[groupKey]);
+    markerById[item.id] = marker;
+  });
+  Object.values(markersByLayer).forEach(g => g.addTo(map));
+
+  const layerListEl = document.getElementById('layer-list');
+  // 分組：廠商 -> 標案 -> 案件性質清單
+  const byVendor = {};
+  located.forEach(item => {
+    const vendor = item.vendor || '未指定廠商';
+    const contractName = item.contractName || '未分類標案';
+    byVendor[vendor] = byVendor[vendor] || {};
+    byVendor[vendor][contractName] = byVendor[vendor][contractName] || [];
+    byVendor[vendor][contractName].push(item);
+  });
+
+  Object.entries(byVendor).forEach(([vendor, contracts]) => {
+    const vendorCount = Object.values(contracts).reduce((sum, arr) => sum + arr.length, 0);
+    const vendorEl = document.createElement('div');
+    vendorEl.className = 'layer-group';
+    const vendorTitle = document.createElement('div');
+    vendorTitle.className = 'layer-group-title';
+    vendorTitle.innerHTML = `<span>🏢 ${vendor}</span><span class="cnt">${vendorCount}</span>`;
+    vendorEl.appendChild(vendorTitle);
+
+    const vendorWrap = document.createElement('div');
+    Object.entries(contracts).forEach(([contractName, items]) => {
+      const contractTitle = document.createElement('div');
+      contractTitle.style.padding = '6px 16px 6px 28px';
+      contractTitle.style.fontSize = '12.5px';
+      contractTitle.style.fontWeight = '600';
+      contractTitle.style.color = '#555';
+      contractTitle.style.background = '#f5f5f5';
+      contractTitle.textContent = `📄 ${contractName}（${items.length}）`;
+      vendorWrap.appendChild(contractTitle);
+
+      items.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'case-item';
+        el.style.paddingLeft = '40px';
+        const typeColor = CASETYPE_COLORS[item.caseType] || '#666';
+        el.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${typeColor};margin-right:5px;"></span>${item.title}<span style="color:#999;font-size:11px;margin-left:4px;">${item.caseType || ''}</span>`;
+        el.addEventListener('click', () => {
+          document.querySelectorAll('.case-item.active').forEach(n => n.classList.remove('active'));
+          el.classList.add('active');
+          map.setView([item.lat, item.lng], 17, { animate: true });
+          markerById[item.id].openPopup();
+          if (window.innerWidth <= 720) document.getElementById('sidebar').classList.remove('open');
+        });
+        vendorWrap.appendChild(el);
+      });
+    });
+    vendorEl.appendChild(vendorWrap);
+
+    vendorTitle.addEventListener('click', () => {
+      vendorWrap.style.display = vendorWrap.style.display === 'none' ? '' : 'none';
+    });
+
+    layerListEl.appendChild(vendorEl);
+  });
+
+  if (unlocated.length > 0) {
+    const sec = document.createElement('div');
+    sec.id = 'unlocated-section';
+    sec.innerHTML = `<div class="layer-group-title"><span>⚠️ 尚未定位的案件</span><span class="cnt">${unlocated.length}</span></div>`;
+    const listWrap = document.createElement('div');
+    unlocated.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'case-item';
+      el.style.cursor = 'default';
+      el.innerHTML = `${item.title || '（未命名）'}<span style="color:#aaa;font-size:11px;margin-left:4px;">未定位</span>`;
+      listWrap.appendChild(el);
+    });
+    sec.appendChild(listWrap);
+    layerListEl.appendChild(sec);
+  }
+}
+
+function renderCurrent() {
+  if (currentMode === 'road') {
+    document.getElementById('sidebar-header').firstChild.textContent = '路面案件管理地圖';
+    renderRoad(roadCasesCache);
+  } else {
+    document.getElementById('sidebar-header').firstChild.textContent = '標案案件管理地圖';
+    renderContract(contractCasesCache);
+  }
+}
+
+document.querySelectorAll('.mode-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentMode = btn.getAttribute('data-mode');
+    document.querySelectorAll('.mode-tab').forEach(b => {
+      const active = b === btn;
+      b.style.background = active ? '#fff' : '#fafafa';
+      b.style.borderBottom = active ? '2px solid #4285F4' : '2px solid transparent';
+      b.style.color = active ? '#222' : '#888';
+    });
+    renderCurrent();
+  });
+});
+
+map.on('popupopen', (e) => {
+  const marker = e.popup._source;
+  if (marker && marker.caseItem) {
+    fillNavInfo(marker.caseItem);
+  }
+});
+
+onSnapshot(collection(db, 'cases'), (snapshot) => {
+  roadCasesCache = [];
+  snapshot.forEach(d => roadCasesCache.push({ id: d.id, ...d.data() }));
+  if (currentMode === 'road') renderCurrent();
+});
+
+onSnapshot(collection(db, 'contract_cases'), (snapshot) => {
+  contractCasesCache = [];
+  snapshot.forEach(d => contractCasesCache.push({ id: d.id, ...d.data() }));
+  if (currentMode === 'contract') renderCurrent();
+});
+
+document.getElementById('sidebar-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
 });
 </script>
 

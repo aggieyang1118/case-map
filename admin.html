@@ -7,29 +7,29 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif; background: #f4f5f7; color: #222; }
+  body { margin: 0; font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif; background: #f7f4ee; color: #3a372f; -webkit-font-smoothing: antialiased; }
 
   /* 密碼畫面 */
   #gate { position: fixed; inset: 0; background: #fff; display: flex; align-items: center; justify-content: center; z-index: 999; }
   #gate .box { text-align: center; }
   #gate input { font-size: 16px; padding: 10px 14px; border: 1px solid #ccc; border-radius: 6px; width: 220px; }
-  #gate button { font-size: 16px; padding: 10px 20px; border: none; background: #4285F4; color: #fff; border-radius: 6px; margin-left: 8px; cursor: pointer; }
+  #gate button { font-size: 16px; padding: 10px 20px; border: none; background: #3d6b66; color: #fff; border-radius: 6px; margin-left: 8px; cursor: pointer; }
   #gate .err { color: #d9534f; margin-top: 10px; font-size: 13px; height: 18px; }
 
   #app { display: none; max-width: 1100px; margin: 0 auto; padding: 20px; }
-  h1 { font-size: 20px; margin-bottom: 4px; }
-  .sub { color: #888; font-size: 13px; margin-bottom: 20px; }
+  h1 { font-size: 21px; margin-bottom: 4px; font-weight: 700; color: #2b2b28; letter-spacing: 0.3px; }
+  .sub { color: #918d80; font-size: 13px; margin-bottom: 20px; }
 
   .top-actions { margin-bottom: 16px; display: flex; gap: 10px; }
   .btn { padding: 9px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
-  .btn-primary { background: #4285F4; color: #fff; }
+  .btn-primary { background: #3d6b66; color: #fff; }
   .btn-secondary { background: #eee; color: #333; }
   .btn-danger { background: #fdecea; color: #d9534f; }
 
-  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-  th, td { text-align: left; padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
-  th { background: #fafafa; color: #666; font-weight: 600; }
-  tr:hover td { background: #f7faff; }
+  table { width: 100%; border-collapse: collapse; background: #fffefb; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(80,70,40,0.08); }
+  th, td { text-align: left; padding: 11px 14px; font-size: 13px; border-bottom: 1px solid #f2ede0; }
+  th { background: #f7f2e6; color: #7a7566; font-weight: 600; }
+  tr:hover td { background: #fbf7ee; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
   .badge-nogeo { background: #fff3cd; color: #92700a; }
   .badge-ok { background: #e6f4ea; color: #1e7e34; }
@@ -37,7 +37,7 @@
 
   /* 表單彈窗 */
   #formOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: flex-start; justify-content: center; z-index: 500; overflow-y: auto; padding: 30px 12px; }
-  #formPanel { background: #fff; border-radius: 10px; width: 100%; max-width: 640px; padding: 24px; }
+  #formPanel { background: #fffefb; border-radius: 14px; width: 100%; max-width: 640px; padding: 26px; box-shadow: 0 12px 40px rgba(60,50,30,0.25); }
   #formPanel h2 { margin-top: 0; font-size: 18px; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; font-weight: 600; }
@@ -56,7 +56,7 @@
 
   .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
-  #uploadStatus { font-size: 12px; color: #4285F4; margin-top: 6px; }
+  #uploadStatus { font-size: 12px; color: #3d6b66; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -76,15 +76,15 @@
 <div id="app">
   <h1>案件後台管理</h1>
   <div class="sub" id="statsLine">載入中...</div>
-  <div style="margin-bottom:12px;">
-    <a href="index.html" style="font-size:13px;color:#4285F4;text-decoration:none;">← 返回地圖首頁</a>
-    <a href="#" id="togglePwSection" style="font-size:13px;color:#999;text-decoration:none;margin-left:16px;">🔒 變更後台密碼</a>
-    <a href="#" id="toggleLogSection" style="font-size:13px;color:#999;text-decoration:none;margin-left:16px;">📋 登入紀錄</a>
+
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#fffefb;padding:10px 14px;border-radius:8px;box-shadow:0 1px 4px rgba(80,70,40,0.08);max-width:360px;">
+    <label style="font-size:13px;color:#7a7566;white-space:nowrap;">你的名字：</label>
+    <input type="text" id="editorNameInput" placeholder="例如：Aggie Yang" style="flex:1;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
   </div>
 
-  <div id="logSection" style="display:none;background:#fff;border-radius:8px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);max-width:420px;max-height:260px;overflow-y:auto;">
-    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">最近登入紀錄（IP 位置與時間）</div>
-    <div id="logList" style="font-size:12px;color:#555;">載入中...</div>
+  <div style="margin-bottom:12px;">
+    <a href="index.html" style="font-size:13px;color:#3d6b66;text-decoration:none;">← 返回地圖首頁</a>
+    <a href="#" id="togglePwSection" style="font-size:13px;color:#999;text-decoration:none;margin-left:16px;">🔒 變更後台密碼</a>
   </div>
 
   <div id="pwSection" style="display:none;background:#fff;border-radius:8px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);max-width:360px;">
@@ -95,7 +95,7 @@
   </div>
 
   <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid #ddd;">
-    <button class="admin-tab active" data-admintab="repair" style="flex:1;padding:10px;border:none;background:#fff;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid #4285F4;">搶修案件管理</button>
+    <button class="admin-tab active" data-admintab="repair" style="flex:1;padding:10px;border:none;background:#fff;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid #3d6b66;">搶修案件管理</button>
     <button class="admin-tab" data-admintab="assess" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">評估案件管理</button>
   </div>
 
@@ -141,8 +141,17 @@
     </div>
     <div id="caseTypeHint" style="font-size:12px;color:#999;margin-bottom:14px;"></div>
 
-    <div class="field">
-      <label>位置（文字地址）</label>
+    <div id="subCategoryField" class="field" style="display:none;">
+      <label>分類</label>
+      <select id="f_subCategory">
+        <option value="近期狂催且有危險案件">近期狂催且有危險案件（超急）</option>
+        <option value="危險案件">危險案件</option>
+        <option value="催辦案件">催辦案件</option>
+        <option value="逾期案件">逾期案件</option>
+      </select>
+    </div>
+
+    <div class="field">      <label>位置（文字地址）</label>
       <div style="display:flex;gap:6px;">
         <input type="text" id="f_location" placeholder="例如：台中市南屯區黎明東街63巷7號前" style="flex:1;">
         <button type="button" id="geocodeBtn" class="btn btn-secondary" style="white-space:nowrap;">🔍 定位</button>
@@ -269,38 +278,6 @@ if (sessionStorage.getItem('admin_ok') === '1') {
   initAfterUnlock();
 }
 
-let logLoaded = false;
-document.getElementById('toggleLogSection').addEventListener('click', async (e) => {
-  e.preventDefault();
-  const sec = document.getElementById('logSection');
-  sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
-  if (sec.style.display === 'block' && !logLoaded) {
-    logLoaded = true;
-    try {
-      const q = query(collection(db, 'access_log'), orderBy('at', 'desc'), limit(20));
-      onSnapshot(q, (snapshot) => {
-        const listEl = document.getElementById('logList');
-        listEl.innerHTML = '';
-        if (snapshot.empty) {
-          listEl.textContent = '尚無紀錄';
-          return;
-        }
-        snapshot.forEach(d => {
-          const data = d.data();
-          const time = data.at ? data.at.toDate().toLocaleString('zh-TW', { hour12: false }) : '（時間記錄中）';
-          const row = document.createElement('div');
-          row.style.padding = '4px 0';
-          row.style.borderBottom = '1px solid #f5f5f5';
-          row.textContent = `${time} — IP：${data.ip || '未知'}`;
-          listEl.appendChild(row);
-        });
-      });
-    } catch (err) {
-      document.getElementById('logList').textContent = '載入紀錄失敗：' + err.message;
-    }
-  }
-});
-
 document.getElementById('togglePwSection').addEventListener('click', (e) => {
   e.preventDefault();
   const sec = document.getElementById('pwSection');
@@ -345,6 +322,14 @@ function initAfterUnlock() {
   });
 }
 
+// ---------- 編輯者姓名（記在瀏覽器裡，方便下次不用重打） ----------
+const editorNameInput = document.getElementById('editorNameInput');
+editorNameInput.value = localStorage.getItem('editorName') || '';
+editorNameInput.addEventListener('input', () => {
+  localStorage.setItem('editorName', editorNameInput.value.trim());
+});
+
+
 
 document.getElementById('searchBox').addEventListener('input', renderTable);
 
@@ -355,7 +340,7 @@ document.querySelectorAll('.admin-tab').forEach(btn => {
     document.querySelectorAll('.admin-tab').forEach(b => {
       const active = b === btn;
       b.style.background = active ? '#fff' : '#fafafa';
-      b.style.borderBottom = active ? '2px solid #4285F4' : '2px solid transparent';
+      b.style.borderBottom = active ? '2px solid #3d6b66' : '2px solid transparent';
       b.style.color = active ? '#222' : '#888';
     });
     renderTable();
@@ -389,7 +374,7 @@ function renderTable() {
     const hasGeo = c.lat != null && c.lng != null;
     const geoBadge = hasGeo ? '<span class="badge badge-ok">已定位</span>' : '<span class="badge badge-nogeo">未定位</span>';
     tr.innerHTML = `
-      <td>${escapeHtml(c.title || '')}${c.constructionReported ? ' <span class="badge badge-ok">已通報</span>' : ''}</td>
+      <td>${escapeHtml(c.title || '')}${c.constructionReported ? ' <span class="badge badge-ok">已通報</span>' : ''}${c.lastEditedBy ? `<div style="font-size:10.5px;color:#aaa;">edit by ${escapeHtml(c.lastEditedBy)}</div>` : ''}</td>
       <td>${escapeHtml(c.vendor || '')}</td>
       <td>${escapeHtml(c.contractName || '')}</td>
       <td>${escapeHtml(c.location || '')}</td>
@@ -432,8 +417,9 @@ function openForm(id) {
 
   document.getElementById('caseTypeHint').textContent =
     `這筆會歸類為「${TAB_CASETYPE[currentAdminTab]}」（依目前頁籤自動設定）`;
+  document.getElementById('subCategoryField').style.display = currentAdminTab === 'repair' ? '' : 'none';
 
-  let data = { title:'', location:'', status:'', lat:null, lng:null, photos:[], contractName:'', vendor:'', constructionReported:false };
+  let data = { title:'', location:'', status:'', lat:null, lng:null, photos:[], contractName:'', vendor:'', constructionReported:false, subCategory:'近期狂催且有危險案件' };
   const list = allContractCases.filter(c => c.caseType === TAB_CASETYPE[currentAdminTab]);
   const lastEditedEl = document.getElementById('lastEditedInfo');
   lastEditedEl.textContent = '';
@@ -441,10 +427,11 @@ function openForm(id) {
     const found = list.find(c => c.id === id);
     if (found) data = found;
     document.getElementById('formTitle').textContent = '編輯案件';
-    if (data.lastEditedIP) {
-      const time = data.updatedAt ? data.updatedAt.toDate().toLocaleString('zh-TW', { hour12: false }) : '';
-      lastEditedEl.textContent = `上次修改：IP ${data.lastEditedIP}${time ? '，於 ' + time : ''}`;
-    }
+    const parts = [];
+    if (data.lastEditedIP) parts.push(`IP ${data.lastEditedIP}`);
+    if (data.lastEditedBy) parts.push(`編輯者 ${data.lastEditedBy}`);
+    if (data.updatedAt) parts.push(`於 ${data.updatedAt.toDate().toLocaleString('zh-TW', { hour12: false })}`);
+    if (parts.length > 0) lastEditedEl.textContent = '上次修改：' + parts.join('，');
   } else {
     document.getElementById('formTitle').textContent = '新增案件';
   }
@@ -455,6 +442,7 @@ function openForm(id) {
   document.getElementById('f_contractName').value = data.contractName || '';
   document.getElementById('f_vendor').value = data.vendor || '';
   document.getElementById('f_reported').checked = !!data.constructionReported;
+  document.getElementById('f_subCategory').value = data.subCategory || '近期狂催且有危險案件';
 
   existingPhotos = Array.isArray(data.photos) ? [...data.photos] : [];
   renderPhotoList();
@@ -621,7 +609,7 @@ function renderPhotoList() {
   pendingPhotoFiles.forEach((file, idx) => {
     const div = document.createElement('div');
     div.className = 'photo-thumb';
-    div.style.border = '2px solid #4285F4';
+    div.style.border = '2px solid #3d6b66';
     const objUrl = URL.createObjectURL(file);
     div.innerHTML = `<img src="${objUrl}"><button class="rm" data-pending="${idx}">✕</button><div style="position:absolute;bottom:0;left:0;right:0;background:rgba(66,133,244,0.85);color:#fff;font-size:9px;text-align:center;padding:1px 0;">新</div>`;
     listEl.appendChild(div);
@@ -697,13 +685,15 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
       contractName: document.getElementById('f_contractName').value.trim(),
       vendor: document.getElementById('f_vendor').value.trim(),
       caseType: TAB_CASETYPE[currentAdminTab],
+      subCategory: currentAdminTab === 'repair' ? document.getElementById('f_subCategory').value : null,
       location: document.getElementById('f_location').value.trim(),
       status: document.getElementById('f_status').value.trim(),
       constructionReported: document.getElementById('f_reported').checked,
       lat, lng,
       photos: finalPhotos,
       updatedAt: serverTimestamp(),
-      lastEditedIP: currentIP
+      lastEditedIP: currentIP,
+      lastEditedBy: editorNameInput.value.trim() || '未填寫姓名'
     };
 
     if (!payload.title) {

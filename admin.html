@@ -90,7 +90,7 @@
 
   <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid #ddd;">
     <button class="admin-tab active" data-admintab="road" style="flex:1;padding:10px;border:none;background:#fff;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid #4285F4;">路面案件管理</button>
-    <button class="admin-tab" data-admintab="contract" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">評比案件管理</button>
+    <button class="admin-tab" data-admintab="contract" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">評估案件管理</button>
   </div>
 
   <div class="top-actions">
@@ -194,9 +194,10 @@
     </div>
 
     <div class="field">
-      <label>照片</label>
+      <label>照片（<span id="photoCountLabel">0</span> 張，每張限制 8MB）</label>
       <div class="photo-list" id="photoList"></div>
-      <input type="file" id="f_photos" accept="image/*" multiple>
+      <label for="f_photos" style="display:inline-block;padding:9px 16px;background:#f0f0f0;color:#333;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">📷 新增照片（可分次多選）</label>
+      <input type="file" id="f_photos" accept="image/*" multiple style="display:none;">
       <div id="uploadStatus"></div>
     </div>
 
@@ -342,7 +343,7 @@ function renderTable() {
   tbody.innerHTML = '';
   const list = currentAdminTab === 'road' ? allCases : allContractCases;
   const withGeo = list.filter(c => c.lat != null).length;
-  const label = currentAdminTab === 'road' ? '案件' : '評估案件';
+  const label = currentAdminTab === 'road' ? '案件' : '標案案件';
   document.getElementById('statsLine').textContent =
     `共 ${list.length} 筆${label}，其中 ${withGeo} 筆已定位、${list.length - withGeo} 筆尚未定位`;
 
@@ -563,27 +564,64 @@ document.getElementById('f_location').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); geocodeAddress(); }
 });
 
+const MAX_PHOTO_MB = 8;
+
 function renderPhotoList() {
   const listEl = document.getElementById('photoList');
   listEl.innerHTML = '';
+
   existingPhotos.forEach((url, idx) => {
     const div = document.createElement('div');
     div.className = 'photo-thumb';
-    div.innerHTML = `<img src="${url}" referrerpolicy="no-referrer"><button class="rm" data-idx="${idx}">✕</button>`;
+    div.innerHTML = `<img src="${url}" referrerpolicy="no-referrer"><button class="rm" data-existing="${idx}">✕</button>`;
     listEl.appendChild(div);
   });
-  listEl.querySelectorAll('.rm').forEach(btn => {
+
+  pendingPhotoFiles.forEach((file, idx) => {
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    div.style.border = '2px solid #4285F4';
+    const objUrl = URL.createObjectURL(file);
+    div.innerHTML = `<img src="${objUrl}"><button class="rm" data-pending="${idx}">✕</button><div style="position:absolute;bottom:0;left:0;right:0;background:rgba(66,133,244,0.85);color:#fff;font-size:9px;text-align:center;padding:1px 0;">新</div>`;
+    listEl.appendChild(div);
+  });
+
+  listEl.querySelectorAll('[data-existing]').forEach(btn => {
     btn.addEventListener('click', () => {
-      existingPhotos.splice(parseInt(btn.getAttribute('data-idx')), 1);
+      existingPhotos.splice(parseInt(btn.getAttribute('data-existing')), 1);
       renderPhotoList();
     });
   });
+  listEl.querySelectorAll('[data-pending]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      pendingPhotoFiles.splice(parseInt(btn.getAttribute('data-pending')), 1);
+      renderPhotoList();
+    });
+  });
+
+  const total = existingPhotos.length + pendingPhotoFiles.length;
+  document.getElementById('photoCountLabel').textContent = total;
+  document.getElementById('uploadStatus').textContent =
+    pendingPhotoFiles.length > 0 ? `其中 ${pendingPhotoFiles.length} 張是新照片，儲存時會自動上傳` : '';
 }
 
 document.getElementById('f_photos').addEventListener('change', (e) => {
-  pendingPhotoFiles = Array.from(e.target.files);
-  document.getElementById('uploadStatus').textContent =
-    pendingPhotoFiles.length > 0 ? `已選擇 ${pendingPhotoFiles.length} 張新照片，儲存時會自動上傳` : '';
+  const newFiles = Array.from(e.target.files);
+  const tooLarge = [];
+  newFiles.forEach(file => {
+    const sizeMB = file.size / (1024 * 1024);
+    if (sizeMB > MAX_PHOTO_MB) {
+      tooLarge.push(`${file.name}（${sizeMB.toFixed(1)}MB）`);
+    } else {
+      pendingPhotoFiles.push(file);
+    }
+  });
+  // 清空 input 的值，這樣同一批檔案下次還能重新選（也讓使用者可以再點一次「新增照片」繼續加）
+  e.target.value = '';
+  renderPhotoList();
+  if (tooLarge.length > 0) {
+    alert(`以下照片超過 ${MAX_PHOTO_MB}MB 限制，未加入：\n` + tooLarge.join('\n'));
+  }
 });
 
 document.getElementById('saveBtn').addEventListener('click', async () => {

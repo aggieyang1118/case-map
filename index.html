@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>路面案件管理地圖</title>
+<title>工程案件管理地圖</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 <style>
   * { box-sizing: border-box; }
@@ -74,12 +74,12 @@
 <div id="app">
   <div id="sidebar">
     <div id="sidebar-header">
-      路面案件管理地圖
+      搶修案件管理地圖
       <div class="count" id="total-count"></div>
       <div class="updated" id="updated-time">即時資料，自動同步</div>
     </div>
     <div id="mode-tabs" style="display:flex;border-bottom:1px solid #eee;">
-      <button class="mode-tab active" data-mode="road" style="flex:1;padding:10px;border:none;background:#fff;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid #4285F4;">路面案件</button>
+      <button class="mode-tab active" data-mode="road" style="flex:1;padding:10px;border:none;background:#fff;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid #4285F4;">搶修案件</button>
       <button class="mode-tab" data-mode="contract" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">評估案件</button>
     </div>
     <div id="layer-list"></div>
@@ -107,6 +107,15 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- 圖片放大燈箱 -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2000;align-items:center;justify-content:center;">
+  <button id="lightboxClose" style="position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:32px;cursor:pointer;line-height:1;">✕</button>
+  <button id="lightboxPrev" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:28px;width:48px;height:48px;border-radius:50%;cursor:pointer;">‹</button>
+  <img id="lightboxImg" src="" referrerpolicy="no-referrer" style="max-width:90vw;max-height:85vh;object-fit:contain;border-radius:4px;">
+  <button id="lightboxNext" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:28px;width:48px;height:48px;border-radius:50%;cursor:pointer;">›</button>
+  <div id="lightboxCount" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;background:rgba(255,255,255,0.15);padding:4px 12px;border-radius:12px;"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -351,12 +360,14 @@ function popupHtml(item) {
   let photoHtml;
   if (item.photos && item.photos.length > 0) {
     const pid = 'ph_' + item.id;
+    window._photoRegistry = window._photoRegistry || {};
+    window._photoRegistry[pid] = item.photos;
     photoHtml = `
       <div class="card-photo-wrap" id="${pid}">
-        <img src="${item.photos[0]}" data-idx="0" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-photo-empty\\'>圖片暫時無法顯示</div>')">
+        <img src="${item.photos[0]}" data-idx="0" referrerpolicy="no-referrer" style="cursor:pointer;" onclick="openLightbox('${pid}')" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-photo-empty\\'>圖片暫時無法顯示</div>')">
         ${item.photos.length > 1 ? `
-          <button class="photo-nav prev" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, -1)">‹</button>
-          <button class="photo-nav next" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, 1)">›</button>
+          <button class="photo-nav prev" onclick="event.stopPropagation();changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, -1)">‹</button>
+          <button class="photo-nav next" onclick="event.stopPropagation();changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, 1)">›</button>
           <div class="photo-count">1 / ${item.photos.length}</div>
         ` : ''}
       </div>`;
@@ -421,6 +432,54 @@ window.changePhoto = function(wrapId, photos, dir) {
   if (countEl) countEl.textContent = `${idx + 1} / ${photos.length}`;
 };
 
+// ---------- 圖片放大燈箱 ----------
+let lightboxState = { photos: [], idx: 0 };
+
+window.openLightbox = function(pid) {
+  const photos = (window._photoRegistry && window._photoRegistry[pid]) || [];
+  if (photos.length === 0) return;
+  const wrap = document.getElementById(pid);
+  const img = wrap ? wrap.querySelector('img') : null;
+  const idx = img ? (parseInt(img.getAttribute('data-idx')) || 0) : 0;
+  lightboxState = { photos, idx };
+  updateLightboxImage();
+  document.getElementById('lightbox').style.display = 'flex';
+};
+
+function updateLightboxImage() {
+  const { photos, idx } = lightboxState;
+  document.getElementById('lightboxImg').src = photos[idx];
+  document.getElementById('lightboxCount').textContent = `${idx + 1} / ${photos.length}`;
+  const showNav = photos.length > 1;
+  document.getElementById('lightboxPrev').style.display = showNav ? 'block' : 'none';
+  document.getElementById('lightboxNext').style.display = showNav ? 'block' : 'none';
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+}
+
+document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+document.getElementById('lightbox').addEventListener('click', (e) => {
+  if (e.target.id === 'lightbox') closeLightbox();
+});
+document.getElementById('lightboxPrev').addEventListener('click', (e) => {
+  e.stopPropagation();
+  lightboxState.idx = (lightboxState.idx - 1 + lightboxState.photos.length) % lightboxState.photos.length;
+  updateLightboxImage();
+});
+document.getElementById('lightboxNext').addEventListener('click', (e) => {
+  e.stopPropagation();
+  lightboxState.idx = (lightboxState.idx + 1) % lightboxState.photos.length;
+  updateLightboxImage();
+});
+document.addEventListener('keydown', (e) => {
+  if (document.getElementById('lightbox').style.display !== 'flex') return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') document.getElementById('lightboxPrev').click();
+  if (e.key === 'ArrowRight') document.getElementById('lightboxNext').click();
+});
+
 function contractFieldRow(label, value) {
   return `<div class="row"><div class="label">${label}</div><div class="value ${value ? '' : 'empty'}">${value || '沒有值'}</div></div>`;
 }
@@ -429,12 +488,14 @@ function contractPopupHtml(item) {
   let photoHtml;
   if (item.photos && item.photos.length > 0) {
     const pid = 'cph_' + item.id;
+    window._photoRegistry = window._photoRegistry || {};
+    window._photoRegistry[pid] = item.photos;
     photoHtml = `
       <div class="card-photo-wrap" id="${pid}">
-        <img src="${item.photos[0]}" data-idx="0" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-photo-empty\\'>圖片暫時無法顯示</div>')">
+        <img src="${item.photos[0]}" data-idx="0" referrerpolicy="no-referrer" style="cursor:pointer;" onclick="openLightbox('${pid}')" onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('afterbegin','<div class=\\'card-photo-empty\\'>圖片暫時無法顯示</div>')">
         ${item.photos.length > 1 ? `
-          <button class="photo-nav prev" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, -1)">‹</button>
-          <button class="photo-nav next" onclick="changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, 1)">›</button>
+          <button class="photo-nav prev" onclick="event.stopPropagation();changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, -1)">‹</button>
+          <button class="photo-nav next" onclick="event.stopPropagation();changePhoto('${pid}', ${JSON.stringify(item.photos).replace(/"/g,'&quot;')}, 1)">›</button>
           <div class="photo-count">1 / ${item.photos.length}</div>
         ` : ''}
       </div>`;
@@ -675,7 +736,7 @@ function renderContract(cases) {
 
 function renderCurrent() {
   if (currentMode === 'road') {
-    document.getElementById('sidebar-header').firstChild.textContent = '路面案件管理地圖';
+    document.getElementById('sidebar-header').firstChild.textContent = '搶修案件管理地圖';
     renderRoad(roadCasesCache);
   } else {
     document.getElementById('sidebar-header').firstChild.textContent = '評估案件管理地圖';

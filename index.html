@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>工程案件管理地圖</title>
+<title>路面案件管理地圖</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 <style>
   * { box-sizing: border-box; }
@@ -90,10 +90,11 @@
   <div style="position:relative; flex:1;">
     <button id="sidebar-toggle">☰</button>
     <div id="map"></div>
-    <div id="routeFab" style="position:absolute;bottom:20px;right:20px;z-index:1000;background:#4285F4;color:#fff;padding:10px 16px;border-radius:24px;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;font-size:13px;font-weight:600;display:none;">
-      🗺️ 路線規劃（<span id="routeCount">0</span>）
+    <div id="routeToast" style="position:absolute;top:16px;left:50%;transform:translateX(-50%) translateY(-20px);z-index:1002;background:#1e7e34;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.3);opacity:0;transition:all .3s;pointer-events:none;">✅ 已加入路線規劃</div>
+    <div id="routeFab" style="position:absolute;top:0;left:0;right:0;z-index:1000;background:#4285F4;color:#fff;padding:14px 16px;box-shadow:0 2px 10px rgba(0,0,0,0.25);cursor:pointer;font-size:15px;font-weight:700;display:none;text-align:center;">
+      🗺️ 目前規劃了 <span id="routeCount">0</span> 個站點 — 點這裡查看路線規劃 ▾
     </div>
-    <div id="routePanel" style="position:absolute;bottom:20px;right:20px;z-index:1001;background:#fff;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);width:320px;max-height:70vh;overflow-y:auto;display:none;">
+    <div id="routePanel" style="position:absolute;top:56px;left:50%;transform:translateX(-50%);z-index:1001;background:#fff;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);width:340px;max-height:70vh;overflow-y:auto;display:none;">
       <div style="padding:12px 14px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
         <strong style="font-size:14px;">路線規劃</strong>
         <button id="closeRoutePanel" style="border:none;background:none;font-size:16px;cursor:pointer;color:#999;">✕</button>
@@ -194,17 +195,46 @@ function googleMapsDirectionUrl(origin, destination, waypoints) {
 // ---------- 路線規劃清單 ----------
 let routeStops = []; // [{id, title, lat, lng}]
 
-function toggleRouteStop(id, title, lat, lng) {
-  const idx = routeStops.findIndex(s => s.id === id);
-  if (idx >= 0) {
-    routeStops.splice(idx, 1);
-  } else {
-    routeStops.push({ id, title, lat, lng });
+function showRouteToast(message) {
+  const toast = document.getElementById('routeToast');
+  toast.textContent = message;
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(showRouteToast._t);
+  showRouteToast._t = setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(-20px)';
+  }, 2200);
+}
+
+function toggleRouteStop(id) {
+  try {
+    console.log('[路線規劃] 按鈕被點擊，id =', id);
+    const idx = routeStops.findIndex(s => s.id === id);
+    if (idx >= 0) {
+      routeStops.splice(idx, 1);
+      console.log('[路線規劃] 已從路線移除');
+      showRouteToast('已從路線移除');
+    } else {
+      const marker = markerById[id];
+      console.log('[路線規劃] 找到的 marker：', marker);
+      const item = marker ? marker.caseItem : null;
+      if (!item) {
+        console.warn('[路線規劃] 找不到對應的案件資料，id =', id);
+        alert('發生問題：找不到這筆案件的資料，請截圖 Console 內容給開發者看。');
+        return;
+      }
+      routeStops.push({ id, title: item.title, lat: item.lat, lng: item.lng });
+      console.log('[路線規劃] 已加入路線，目前路線：', routeStops);
+      showRouteToast('✅ 已加入路線規劃（上方查看）');
+    }
+    updateRouteFab();
+    renderRoutePanel();
+    if (markerById[id]) markerById[id].openPopup();
+  } catch (err) {
+    console.error('[路線規劃] 發生錯誤：', err);
+    alert('加入路線發生錯誤：' + err.message);
   }
-  updateRouteFab();
-  renderRoutePanel();
-  // 重新開一次目前的 popup 讓按鈕文字更新
-  if (markerById[id]) markerById[id].openPopup();
 }
 window.toggleRouteStop = toggleRouteStop;
 
@@ -332,7 +362,7 @@ function popupHtml(item) {
   }
 
   const reportArea = item.constructionReported
-    ? `<div class="card-report-area"><div class="report-done">✅ 已通報施工</div><div style="text-align:center;margin-top:6px;"><a href="#" style="font-size:11px;color:#999;" onclick="cancelReport('${item.id}');return false;">不小心點到？取消通報</a></div></div>`
+    ? `<div class="card-report-area"><button class="report-btn" style="background:#5f6368;" onclick="cancelReport('${item.id}')">✓ 已通報施工（點此取消）</button></div>`
     : `<div class="card-report-area"><button class="report-btn" onclick="reportConstruction('${item.id}')">通報施工</button></div>`;
 
   const inRoute = routeStops.some(s => s.id === item.id);
@@ -341,7 +371,7 @@ function popupHtml(item) {
       <div id="navinfo_${item.id}" style="font-size:12px;color:#666;margin-bottom:8px;">距離計算中...</div>
       <div style="display:flex;gap:6px;">
         <button onclick="window.open('${googleMapsDirectionUrl(null, {lat:item.lat,lng:item.lng})}','_blank')" style="flex:1;padding:8px;border:none;border-radius:6px;background:#34a853;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🧭 開始導航</button>
-        <button onclick="toggleRouteStop('${item.id}', ${JSON.stringify(item.title || '')}, ${item.lat}, ${item.lng})" style="flex:1;padding:8px;border:none;border-radius:6px;background:${inRoute ? '#e6f4ea' : '#f0f0f0'};color:${inRoute ? '#1e7e34' : '#555'};font-size:12px;font-weight:600;cursor:pointer;">${inRoute ? '✓ 已加入路線' : '➕ 加入路線'}</button>
+        <button onclick="toggleRouteStop('${item.id}')" style="flex:1;padding:8px;border:none;border-radius:6px;background:${inRoute ? '#e6f4ea' : '#f0f0f0'};color:${inRoute ? '#1e7e34' : '#555'};font-size:12px;font-weight:600;cursor:pointer;">${inRoute ? '✓ 已加入路線' : '➕ 加入路線'}</button>
       </div>
     </div>`;
 
@@ -415,7 +445,7 @@ function contractPopupHtml(item) {
       <div id="navinfo_${item.id}" style="font-size:12px;color:#666;margin-bottom:8px;">距離計算中...</div>
       <div style="display:flex;gap:6px;">
         <button onclick="window.open('${googleMapsDirectionUrl(null, {lat:item.lat,lng:item.lng})}','_blank')" style="flex:1;padding:8px;border:none;border-radius:6px;background:#34a853;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">🧭 開始導航</button>
-        <button onclick="toggleRouteStop('${item.id}', ${JSON.stringify(item.title || '')}, ${item.lat}, ${item.lng})" style="flex:1;padding:8px;border:none;border-radius:6px;background:${inRoute ? '#e6f4ea' : '#f0f0f0'};color:${inRoute ? '#1e7e34' : '#555'};font-size:12px;font-weight:600;cursor:pointer;">${inRoute ? '✓ 已加入路線' : '➕ 加入路線'}</button>
+        <button onclick="toggleRouteStop('${item.id}')" style="flex:1;padding:8px;border:none;border-radius:6px;background:${inRoute ? '#e6f4ea' : '#f0f0f0'};color:${inRoute ? '#1e7e34' : '#555'};font-size:12px;font-weight:600;cursor:pointer;">${inRoute ? '✓ 已加入路線' : '➕ 加入路線'}</button>
       </div>
     </div>`;
 
@@ -460,7 +490,7 @@ function renderRoad(cases) {
     const color = LAYER_COLORS[item.layer] || '#666';
     const label = LAYER_LABELS[item.layer] || '?';
     const marker = L.marker([item.lat, item.lng], { icon: makeIcon(color, label) });
-    marker.bindPopup(popupHtml(item), { maxWidth: 310, closeButton: true, autoPan: true });
+    marker.bindPopup(() => popupHtml(item), { maxWidth: 310, closeButton: true, autoPan: true });
     marker.on('mouseover', () => marker.openPopup());
     marker.on('click', () => marker.openPopup());
 
@@ -549,7 +579,7 @@ function renderContract(cases) {
     const color = CASETYPE_COLORS[item.caseType] || '#666';
     const label = CASETYPE_LABELS[item.caseType] || '?';
     const marker = L.marker([item.lat, item.lng], { icon: makeIcon(color, label) });
-    marker.bindPopup(contractPopupHtml(item), { maxWidth: 310, closeButton: true, autoPan: true });
+    marker.bindPopup(() => contractPopupHtml(item), { maxWidth: 310, closeButton: true, autoPan: true });
     marker.on('mouseover', () => marker.openPopup());
     marker.on('click', () => marker.openPopup());
 

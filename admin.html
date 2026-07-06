@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>後台管理</title>
+<title>案件後台管理</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 <style>
   * { box-sizing: border-box; }
@@ -76,6 +76,17 @@
 <div id="app">
   <h1>案件後台管理</h1>
   <div class="sub" id="statsLine">載入中...</div>
+  <div style="margin-bottom:12px;">
+    <a href="index.html" style="font-size:13px;color:#4285F4;text-decoration:none;">← 返回地圖首頁</a>
+    <a href="#" id="togglePwSection" style="font-size:13px;color:#999;text-decoration:none;margin-left:16px;">🔒 變更後台密碼</a>
+  </div>
+
+  <div id="pwSection" style="display:none;background:#fff;border-radius:8px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);max-width:360px;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">變更後台密碼</div>
+    <input type="password" id="newPwInput" placeholder="輸入新密碼" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:14px;margin-bottom:8px;">
+    <button id="savePwBtn" class="btn btn-primary" style="width:100%;">儲存新密碼</button>
+    <div id="pwSaveMsg" style="font-size:12px;margin-top:8px;"></div>
+  </div>
 
   <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid #ddd;">
     <button class="admin-tab active" data-admintab="road" style="flex:1;padding:10px;border:none;background:#fff;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid #4285F4;">路面案件管理</button>
@@ -197,7 +208,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, serverTimestamp, query, orderBy
+  onSnapshot, serverTimestamp, query, orderBy, getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getStorage, ref, uploadBytes, getDownloadURL
@@ -216,7 +227,20 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-const ADMIN_PASSWORD = "caseadmin2026";
+// ===== 後台密碼（優先讀取資料庫裡設定的密碼，讀不到時用這個預設值） =====
+let ADMIN_PASSWORD = "0000";
+const PASSWORD_DOC = doc(db, 'settings', 'admin');
+async function loadPassword() {
+  try {
+    const snap = await getDoc(PASSWORD_DOC);
+    if (snap.exists() && snap.data().password) {
+      ADMIN_PASSWORD = snap.data().password;
+    }
+  } catch (e) {
+    console.warn('讀取密碼設定失敗，使用預設密碼', e);
+  }
+}
+const passwordLoadPromise = loadPassword();
 
 // ---------- 密碼保護 ----------
 if (sessionStorage.getItem('admin_ok') === '1') {
@@ -225,7 +249,8 @@ if (sessionStorage.getItem('admin_ok') === '1') {
 }
 document.getElementById('pwBtn').addEventListener('click', checkPassword);
 document.getElementById('pwInput').addEventListener('keydown', e => { if (e.key === 'Enter') checkPassword(); });
-function checkPassword() {
+async function checkPassword() {
+  await passwordLoadPromise;
   const val = document.getElementById('pwInput').value;
   if (val === ADMIN_PASSWORD) {
     sessionStorage.setItem('admin_ok', '1');
@@ -239,6 +264,32 @@ function checkPassword() {
 if (sessionStorage.getItem('admin_ok') === '1') {
   initAfterUnlock();
 }
+
+document.getElementById('togglePwSection').addEventListener('click', (e) => {
+  e.preventDefault();
+  const sec = document.getElementById('pwSection');
+  sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('savePwBtn').addEventListener('click', async () => {
+  const newPw = document.getElementById('newPwInput').value;
+  const msgEl = document.getElementById('pwSaveMsg');
+  if (!newPw || newPw.length < 1) {
+    msgEl.style.color = '#d9534f';
+    msgEl.textContent = '請輸入新密碼';
+    return;
+  }
+  try {
+    await setDoc(PASSWORD_DOC, { password: newPw }, { merge: true });
+    ADMIN_PASSWORD = newPw;
+    msgEl.style.color = '#1e7e34';
+    msgEl.textContent = '✅ 密碼已更新，下次登入請用新密碼';
+    document.getElementById('newPwInput').value = '';
+  } catch (e) {
+    msgEl.style.color = '#d9534f';
+    msgEl.textContent = '儲存失敗：' + e.message;
+  }
+});
 
 // ---------- 全域狀態 ----------
 let allCases = [];

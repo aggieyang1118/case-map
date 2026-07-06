@@ -491,6 +491,12 @@ function moveToLocation(lat, lng, zoom) {
   updateCoordHint(lat, lng);
 }
 
+async function tryGeocode(address) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=tw&limit=1&q=${encodeURIComponent(address)}`;
+  const res = await fetch(url, { headers: { 'Accept-Language': 'zh-TW' } });
+  return await res.json();
+}
+
 async function geocodeAddress() {
   const msgEl = document.getElementById('geocodeMsg');
   let address = document.getElementById('f_location').value.trim();
@@ -499,16 +505,27 @@ async function geocodeAddress() {
     msgEl.textContent = '請先輸入位置文字地址';
     return;
   }
+  // 統一用字：臺 -> 台，提高比對成功率
+  address = address.replace(/臺/g, '台');
   // 如果地址沒寫城市，幫忙補上「台中市」提高定位準確度
-  if (!/台中|臺中/.test(address)) {
+  if (!address.includes('台中')) {
     address = '台中市' + address;
   }
+
   msgEl.style.color = '#999';
   msgEl.textContent = '定位中...';
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=tw&limit=1&q=${encodeURIComponent(address)}`;
-    const res = await fetch(url, { headers: { 'Accept-Language': 'zh-TW' } });
-    const results = await res.json();
+    let results = await tryGeocode(address);
+
+    // 第一次查不到，嘗試去掉「里/村」名稱再查一次（國際地圖資料庫通常沒有登記到里的細節）
+    if (results.length === 0) {
+      const simplified = address.replace(/(區|鄉|鎮|市)[\u4e00-\u9fff]{1,4}(里|村)(?=[\u4e00-\u9fff\d])/, '$1');
+      if (simplified !== address) {
+        msgEl.textContent = '定位中（嘗試簡化地址）...';
+        results = await tryGeocode(simplified);
+      }
+    }
+
     if (results.length === 0) {
       msgEl.style.color = '#d9534f';
       msgEl.textContent = '找不到這個地址，請直接在地圖上點選位置';

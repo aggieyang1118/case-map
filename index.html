@@ -574,7 +574,7 @@ function renderContract(cases) {
   const unlocated = cases.filter(c => c.lat == null || c.lng == null);
 
   document.getElementById('total-count').textContent =
-    `共 ${cases.length} 筆標案案件（${unlocated.length} 筆未定位）`;
+    `共 ${cases.length} 筆評比案件（${unlocated.length} 筆未定位）`;
 
   located.forEach(item => {
     const color = CASETYPE_COLORS[item.caseType] || '#666';
@@ -670,7 +670,7 @@ function renderCurrent() {
     document.getElementById('sidebar-header').firstChild.textContent = '路面案件管理地圖';
     renderRoad(roadCasesCache);
   } else {
-    document.getElementById('sidebar-header').firstChild.textContent = '標案案件管理地圖';
+    document.getElementById('sidebar-header').firstChild.textContent = '評比案件管理地圖';
     renderContract(contractCasesCache);
   }
 }

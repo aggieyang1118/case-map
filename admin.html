@@ -90,7 +90,7 @@
 
   <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid #ddd;">
     <button class="admin-tab active" data-admintab="road" style="flex:1;padding:10px;border:none;background:#fff;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid #4285F4;">路面案件管理</button>
-    <button class="admin-tab" data-admintab="contract" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">標案案件管理</button>
+    <button class="admin-tab" data-admintab="contract" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">評比案件管理</button>
   </div>
 
   <div class="top-actions">
@@ -342,7 +342,7 @@ function renderTable() {
   tbody.innerHTML = '';
   const list = currentAdminTab === 'road' ? allCases : allContractCases;
   const withGeo = list.filter(c => c.lat != null).length;
-  const label = currentAdminTab === 'road' ? '案件' : '標案案件';
+  const label = currentAdminTab === 'road' ? '案件' : '評估案件';
   document.getElementById('statsLine').textContent =
     `共 ${list.length} 筆${label}，其中 ${withGeo} 筆已定位、${list.length - withGeo} 筆尚未定位`;
 

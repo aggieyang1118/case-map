@@ -398,7 +398,7 @@ function renderTable() {
   }
 
   const withGeo = list.filter(c => c.lat != null).length;
-  const label = currentAdminTab === 'road' ? '案件' : '標案案件';
+  const label = currentAdminTab === 'road' ? '案件' : '評估案件';
   document.getElementById('statsLine').textContent = keyword
     ? `搜尋「${document.getElementById('searchBox').value.trim()}」找到 ${list.length} 筆`
     : `共 ${list.length} 筆${label}，其中 ${withGeo} 筆已定位、${list.length - withGeo} 筆尚未定位`;
@@ -798,7 +798,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 </script>
 
 <div style="position:fixed;bottom:4px;right:8px;z-index:9999;font-size:10px;color:rgba(0,0,0,0.35);background:rgba(255,255,255,0.6);padding:2px 8px;border-radius:6px;pointer-events:none;">
-  create by Aggie Yang
+   create by Aggie Yang
 </div>
 
 </body>

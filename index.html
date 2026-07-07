@@ -82,6 +82,9 @@
       <button class="mode-tab active" data-mode="road" style="flex:1;padding:10px;border:none;background:#fff;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid #4285F4;">搶修案件</button>
       <button class="mode-tab" data-mode="contract" style="flex:1;padding:10px;border:none;background:#fafafa;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#888;">評估案件</button>
     </div>
+    <div style="padding:10px 12px;border-bottom:1px solid #eee;">
+      <input type="text" id="mapSearchBox" placeholder="🔍 搜尋案件標題、位置..." style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
     <div id="layer-list"></div>
     <div style="padding:10px 16px;border-top:1px solid #eee;text-align:center;">
       <a href="admin.html" target="_blank" rel="noopener" style="font-size:12px;color:#999;text-decoration:none;">⚙ 後台管理（另開新分頁）</a>
@@ -393,8 +396,9 @@ function popupHtml(item) {
       </div>
     </div>`;
 
+  const isDone = !!(item.completedDate && item.completedDate.trim());
   return `
-    <div class="card-header">${item.title}</div>
+    <div class="card-header" style="${isDone ? 'text-decoration:line-through;color:#aaa;' : ''}">${item.title}${isDone ? ' <span style="text-decoration:none;color:#1e7e34;font-size:11px;">✓ 已完成</span>' : ''}</div>
     ${photoHtml}
     <div class="card-info">
       ${fieldRow('位置', item.location)}
@@ -548,11 +552,20 @@ function renderRoad(cases) {
   clearMap();
   document.getElementById('layer-list').innerHTML = '';
 
+  const keyword = (document.getElementById('mapSearchBox').value || '').trim().toLowerCase();
+  if (keyword) {
+    cases = cases.filter(c =>
+      (c.title || '').toLowerCase().includes(keyword) ||
+      (c.location || '').toLowerCase().includes(keyword)
+    );
+  }
+
   const located = cases.filter(c => c.lat != null && c.lng != null);
   const unlocated = cases.filter(c => c.lat == null || c.lng == null);
 
-  document.getElementById('total-count').textContent =
-    `共 ${cases.length} 筆案件（${unlocated.length} 筆未定位）`;
+  document.getElementById('total-count').textContent = keyword
+    ? `搜尋「${document.getElementById('mapSearchBox').value.trim()}」找到 ${cases.length} 筆`
+    : `共 ${cases.length} 筆案件（${unlocated.length} 筆未定位）`;
 
   located.forEach(item => {
     const color = LAYER_COLORS[item.layer] || '#666';
@@ -595,11 +608,16 @@ function renderRoad(cases) {
     groupEl.appendChild(titleEl);
 
     const listWrap = document.createElement('div');
-    items.forEach(item => {
+    items.forEach((item, idx) => {
       const overdueDays = parseFloat(item.overdueDays) || 0;
+      const isDone = !!(item.completedDate && item.completedDate.trim());
       const el = document.createElement('div');
       el.className = 'case-item';
-      el.innerHTML = `${item.title}${overdueDays > 0 ? `<span class="overdue-tag">逾期${Math.round(overdueDays)}天</span>` : ''}${item.constructionReported ? `<span class="reported-tag">已通報</span>` : ''}`;
+      if (isDone) {
+        el.style.color = '#aaa';
+        el.style.textDecoration = 'line-through';
+      }
+      el.innerHTML = `<span style="color:#999;margin-right:4px;">${idx + 1}.</span>${item.title}${!isDone && overdueDays > 0 ? `<span class="overdue-tag">逾期${Math.round(overdueDays)}天</span>` : ''}${isDone ? `<span style="text-decoration:none;color:#1e7e34;font-size:11px;margin-left:4px;">✓ 已完成</span>` : ''}${!isDone && item.constructionReported ? `<span class="reported-tag">已通報</span>` : ''}`;
       el.addEventListener('click', () => {
         document.querySelectorAll('.case-item.active').forEach(n => n.classList.remove('active'));
         el.classList.add('active');
@@ -644,11 +662,22 @@ function renderContract(cases) {
   clearMap();
   document.getElementById('layer-list').innerHTML = '';
 
+  const keyword = (document.getElementById('mapSearchBox').value || '').trim().toLowerCase();
+  if (keyword) {
+    cases = cases.filter(c =>
+      (c.title || '').toLowerCase().includes(keyword) ||
+      (c.location || '').toLowerCase().includes(keyword) ||
+      (c.vendor || '').toLowerCase().includes(keyword) ||
+      (c.contractName || '').toLowerCase().includes(keyword)
+    );
+  }
+
   const located = cases.filter(c => c.lat != null && c.lng != null);
   const unlocated = cases.filter(c => c.lat == null || c.lng == null);
 
-  document.getElementById('total-count').textContent =
-    `共 ${cases.length} 筆標案案件（${unlocated.length} 筆未定位）`;
+  document.getElementById('total-count').textContent = keyword
+    ? `搜尋「${document.getElementById('mapSearchBox').value.trim()}」找到 ${cases.length} 筆`
+    : `共 ${cases.length} 筆標案案件（${unlocated.length} 筆未定位）`;
 
   located.forEach(item => {
     const color = CASETYPE_COLORS[item.caseType] || '#666';
@@ -697,12 +726,12 @@ function renderContract(cases) {
       contractTitle.textContent = `📄 ${contractName}（${items.length}）`;
       vendorWrap.appendChild(contractTitle);
 
-      items.forEach(item => {
+      items.forEach((item, idx) => {
         const el = document.createElement('div');
         el.className = 'case-item';
         el.style.paddingLeft = '40px';
         const typeColor = CASETYPE_COLORS[item.caseType] || '#666';
-        el.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${typeColor};margin-right:5px;"></span>${item.title}<span style="color:#999;font-size:11px;margin-left:4px;">${item.caseType || ''}</span>`;
+        el.innerHTML = `<span style="color:#999;margin-right:4px;">${idx + 1}.</span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${typeColor};margin-right:5px;"></span>${item.title}<span style="color:#999;font-size:11px;margin-left:4px;">${item.caseType || ''}</span>`;
         el.addEventListener('click', () => {
           document.querySelectorAll('.case-item.active').forEach(n => n.classList.remove('active'));
           el.classList.add('active');
@@ -749,9 +778,12 @@ function renderCurrent() {
   }
 }
 
+document.getElementById('mapSearchBox').addEventListener('input', renderCurrent);
+
 document.querySelectorAll('.mode-tab').forEach(btn => {
   btn.addEventListener('click', () => {
     currentMode = btn.getAttribute('data-mode');
+    document.getElementById('mapSearchBox').value = '';
     document.querySelectorAll('.mode-tab').forEach(b => {
       const active = b === btn;
       b.style.background = active ? '#fff' : '#fafafa';
